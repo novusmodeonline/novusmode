@@ -79,7 +79,7 @@ export default function OrderConfirmation({ orderId }) {
                   className="flex gap-5 border rounded-2xl p-4 hover:shadow-md transition"
                 >
                   <img
-                    src={`/images/${item.mainImage}`}
+                    src={`/images${item.mainImage}`}
                     alt={item.title}
                     className="w-24 h-24 rounded-xl object-cover"
                   />

@@ -104,7 +104,7 @@ const CartClient = () => {
                               height={200}
                               src={
                                 product?.mainImage
-                                  ? `/images/${product.mainImage}`
+                                  ? `/images${product.mainImage}`
                                   : "/images/product_placeholder.jpg"
                               }
                               alt="Product image"
@@ -164,7 +164,7 @@ const CartClient = () => {
                             height={192}
                             src={
                               product?.mainImage
-                                ? `/images/${product.mainImage}`
+                                ? `/images${product.mainImage}`
                                 : "/images/product_placeholder.jpg"
                             }
                             alt="Product image"

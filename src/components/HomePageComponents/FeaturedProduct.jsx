@@ -75,7 +75,7 @@ export default function FeaturedProducts({ products = [] }) {
                   style={{ aspectRatio: "4/3", minHeight: "60%" }}
                 >
                   <img
-                    src={`/images/${product.mainImage}`}
+                    src={`/images${product.mainImage}`}
                     alt={product.title}
                     className="rounded-t-2xl w-full h-full object-cover group-hover:scale-105 transition-transform"
                     style={{ minHeight: "180px", maxHeight: "260px" }}

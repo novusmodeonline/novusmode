@@ -10,7 +10,7 @@ const PDPProductImages = ({ mainImage, images }) => {
       <Image
         src={
           selectedImage
-            ? `/images/${selectedImage}`
+            ? `/images${selectedImage}`
             : "/images/product_placeholder.jpg"
         }
         width={500}
@@ -32,7 +32,7 @@ const PDPProductImages = ({ mainImage, images }) => {
               onClick={() => setSelectedImage(img.image)}
             >
               <Image
-                src={`/images/${img.image}`}
+                src={`/images${img.image}`}
                 width={80}
                 height={80}
                 alt={`Thumbnail ${idx + 1}`}

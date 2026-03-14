@@ -63,7 +63,7 @@ const WishlistItem = ({
 
       <div className="cursor-pointer" onClick={openProduct}>
         <Image
-          src={`/images/${image}`}
+          src={`/images${image}`}
           alt={title}
           width={300}
           height={300}
@@ -80,9 +80,8 @@ const WishlistItem = ({
         </h3>
         <p className="text-sm text-gray-500 mb-2">₹{price}</p>
         <p
-          className={`text-sm font-medium mb-4 ${
-            stockAvailabillity ? "text-green-600" : "text-red-500"
-          }`}
+          className={`text-sm font-medium mb-4 ${stockAvailabillity ? "text-green-600" : "text-red-500"
+            }`}
         >
           {stockAvailabillity ? "In Stock" : "Out of Stock"}
         </p>

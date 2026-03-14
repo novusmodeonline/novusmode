@@ -107,11 +107,10 @@ const SearchInput = ({ mobile = false, onAfterSearch }) => {
       {results.length > 0 && (
         <div
           className={`z-50 bg-white shadow-xl overflow-y-auto border
-      ${
-        mobile
-          ? "mt-2 max-h-[70vh] px-2"
-          : "absolute left-0 right-0 top-full mt-2 rounded-xl max-h-96"
-      }
+      ${mobile
+              ? "mt-2 max-h-[70vh] px-2"
+              : "absolute left-0 right-0 top-full mt-2 rounded-xl max-h-96"
+            }
     `}
           style={mobile ? { position: "static" } : {}}
         >
@@ -129,7 +128,7 @@ const SearchInput = ({ mobile = false, onAfterSearch }) => {
                 <img
                   src={
                     item?.mainImage
-                      ? `/images/${item.mainImage}`
+                      ? `/images${item.mainImage}`
                       : "/images/product_placeholder.jpg"
                   }
                   alt={item.title}

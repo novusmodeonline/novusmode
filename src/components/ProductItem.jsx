@@ -10,7 +10,7 @@ const ProductItem = ({ product, color }) => {
         <Image
           src={
             product.mainImage
-              ? `/images/${product.mainImage}`
+              ? `/images${product.mainImage}`
               : "/images/product_placeholder.jpg"
           }
           width="0"
