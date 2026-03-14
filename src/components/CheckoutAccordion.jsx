@@ -94,9 +94,16 @@ export default function CheckoutAccordion() {
   useEffect(() => {
     if (!hasHydrated || isHydrating) return;
 
-    if (!products || products.length === 0) {
-      toast.error("You don't have items in your cart");
-      router.replace("/cart");
+    // Prevent redirect if on order-confirmation page
+    if (typeof window !== "undefined") {
+      const path = window.location.pathname;
+      if (
+        (!products || products.length === 0) &&
+        !path.includes("order-confirmation")
+      ) {
+        toast.error("You don't have items in your cart");
+        router.replace("/cart");
+      }
     }
   }, [hasHydrated, isHydrating, products, router]);
 

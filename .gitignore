@@ -5,3 +5,4 @@ yarn.lock
 .env.local
 deploy.sh
 dnf install -y git curl nginx nano.txt
+prisma/dev.db
