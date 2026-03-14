@@ -64,7 +64,7 @@ const Checkout = () => {
         if (!isValidEmailAddressFormat(f.email))
           return toast.error("Invalid email");
 
-        await fetch("/api/orders", {
+        const res = await fetch("/api/orders", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -83,18 +83,15 @@ const Checkout = () => {
             orderNotice: f.orderNotice,
             orderItems: products,
           }),
-        })
-          .then((res) => res.json())
-          .then((data) => {
-            if (data.success) {
-              const orderId = data.order.id;
-              clearCart();
-              toast.success("Order created successfully");
-              router.push(`/order-confirmation?orderId=${orderId}`);
-            } else {
-              toast.error("Order not processed");
-            }
-          });
+        });
+        const data = await res.json();
+        if (data.success && data.order && data.order.id) {
+          clearCart();
+          toast.success("Order created successfully");
+          router.push(`/order-confirmation?orderId=${data.order.id}`);
+        } else {
+          toast.error("Order not processed");
+        }
       } else {
         toast.error("Please fill all required fields");
       }

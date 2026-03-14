@@ -9,12 +9,7 @@ const OrderConfirmationPage = () => {
   const searchParams = useSearchParams();
   const orderId = searchParams.get("orderId");
 
-  useEffect(() => {
-    console.log("searchParams.clearCart : ", searchParams.get("clearCart"));
-    if (searchParams.get("clearCart") === "1") {
-      clearCart();
-    }
-  }, []);
+  // Removed redundant cart clearing logic. Cart is cleared only after successful order creation.
 
   return <OrderConfirmation orderId={orderId} />;
 };

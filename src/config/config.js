@@ -2,7 +2,8 @@ import { headers } from "next/headers";
 
 export async function getBaseURL() {
   const headersList = headers();
-  const protocol = process.env.NODE_ENV === "development" ? "http" : "https";
+  // Hardcoded protocol to 'http' for local development to avoid SSL errors
+  const protocol = "http";
   const host = headersList.get("host");
 
   return `${protocol}://${host}`;
