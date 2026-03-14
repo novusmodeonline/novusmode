@@ -1,0 +1,7 @@
+.next
+node_modules
+yarn.lock
+.env
+.env.local
+deploy.sh
+dnf install -y git curl nginx nano.txt

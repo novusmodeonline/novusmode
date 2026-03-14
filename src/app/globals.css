@@ -1,0 +1,55 @@
+@import "tailwindcss";
+@import "../styles/variables.css";
+@import "react-datepicker/dist/react-datepicker.css";
+
+/* ============================
+   PRINT STYLES (PDF / Print)
+   ============================ */
+
+@media print {
+  /* Hide site chrome */
+  header,
+  nav,
+  footer,
+  .site-header,
+  .site-navbar,
+  .site-footer {
+    display: none !important;
+  }
+
+  /* Remove body padding imposed by layout */
+  body {
+    margin: 0 !important;
+    padding: 0 !important;
+    background: white !important;
+  }
+
+  /* Only show invoice */
+  body * {
+    visibility: hidden;
+  }
+
+  .invoice-print-root,
+  .invoice-print-root * {
+    visibility: visible;
+  }
+
+  .invoice-print-root {
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+  }
+
+  /* Match browser card width */
+  #invoice-download {
+    max-width: 800px;
+    margin: 0 auto;
+  }
+}
+
+/* Page size & margins */
+@page {
+  size: A4;
+  margin: 12mm;
+}

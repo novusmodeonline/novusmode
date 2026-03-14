@@ -1,0 +1,130 @@
+.field-wrap {
+  position: relative;
+  margin-bottom: 22px;
+}
+
+.floating-input {
+  width: 100%;
+  padding: 14px 12px;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  background: var(--color-inverted-bg);
+  color: var(--color-inverted-text);
+}
+
+.float-label {
+  position: absolute;
+  top: -10px;
+  left: 12px;
+  padding: 0 4px;
+  font-size: 12px;
+  background: var(--color-bg);
+  color: white;
+}
+
+.error-text {
+  color: #ff4b4b;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.next-btn {
+  width: 100%;
+  padding: 14px;
+  background: var(--color-bg);
+  color: white;
+  border-radius: 8px;
+}
+
+.checkbox-line {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 18px;
+}
+
+.loader-overlay {
+  position: absolute;
+  inset: 0;
+  background: var(--color-loader-bg);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.loader-spin {
+  font-size: 30px;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from {
+    rotate: 0deg;
+  }
+  to {
+    rotate: 360deg;
+  }
+}
+
+/* Accordion header tweaks */
+.accordion-header {
+  display: flex;
+  flex-direction: column;
+}
+
+.accordion-summary {
+  margin-top: 0.5rem;
+  color: #6b7280; /* gray-600 */
+  font-size: 0.9rem;
+  line-height: 1.25rem;
+}
+
+/* Prevent overflow of long summary values */
+.accordion-summary .truncate {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* Completed badge */
+.accordion-complete-badge {
+  width: 2rem;
+  height: 2rem;
+  border-radius: 9999px;
+  background: rgba(34, 197, 94, 0.08); /* green tint */
+  color: #16a34a; /* green-600 */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+}
+
+/* Make the chevron visually subtle */
+.accordion-chevron {
+  color: #9ca3af; /* gray-400 */
+  font-size: 1.1rem;
+}
+
+/* Slightly larger header padding */
+.accordion-item > button {
+  padding-top: 1rem;
+  padding-bottom: 1rem;
+}
+
+/* summary block spacing inside header */
+.accordion-summary-list {
+  margin-top: 0.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.upi-pay-btn {
+  cursor: pointer;
+  background: var(--color-bg);
+}
+
+.upi-pay-btn:disabled {
+  cursor: not-allowed;
+  background-color: #9ca3af;
+}

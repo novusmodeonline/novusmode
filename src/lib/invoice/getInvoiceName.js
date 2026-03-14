@@ -1,0 +1,150 @@
+export const HINDU_NAMES = {
+  maleFirst: [
+    "Amit",
+    "Rahul",
+    "Rohit",
+    "Ankit",
+    "Vikas",
+    "Suresh",
+    "Ramesh",
+    "Arjun",
+    "Kunal",
+    "Nitin",
+    "Sachin",
+    "Pradeep",
+    "Manoj",
+    "Deepak",
+    "Ashok",
+    "Vinod",
+    "Ajay",
+    "Sanjay",
+    "Mukesh",
+    "Pankaj",
+    "Gaurav",
+    "Vivek",
+    "Alok",
+    "Harish",
+    "Naresh",
+    "Mahesh",
+    "Rajesh",
+    "Dinesh",
+    "Sunil",
+    "Aakash",
+  ],
+
+  femaleFirst: [
+    "Priya",
+    "Neha",
+    "Pooja",
+    "Anjali",
+    "Kavita",
+    "Sunita",
+    "Ritu",
+    "Meena",
+    "Rekha",
+    "Shweta",
+    "Nisha",
+    "Kiran",
+    "Suman",
+    "Preeti",
+    "Aarti",
+    "Komal",
+    "Rashmi",
+    "Anita",
+    "Payal",
+    "Monika",
+    "Sneha",
+    "Divya",
+    "Swati",
+    "Rachna",
+    "Pallavi",
+    "Jyoti",
+    "Sheetal",
+  ],
+
+  maleLast: [
+    "Sharma",
+    "Verma",
+    "Gupta",
+    "Agarwal",
+    "Mishra",
+    "Pandey",
+    "Tiwari",
+    "Tripathi",
+    "Shukla",
+    "Dubey",
+    "Chaturvedi",
+    "Singh",
+    "Yadav",
+    "Bansal",
+    "Jain",
+    "Goyal",
+    "Khanna",
+    "Mehta",
+    "Kapoor",
+    "Malhotra",
+    "Arora",
+    "Saxena",
+    "Srivastava",
+    "Mathur",
+    "Joshi",
+  ],
+
+  femaleLast: [
+    "Sharma",
+    "Verma",
+    "Gupta",
+    "Agarwal",
+    "Mishra",
+    "Pandey",
+    "Tiwari",
+    "Tripathi",
+    "Shukla",
+    "Dubey",
+    "Chaturvedi",
+    "Singh",
+    "Yadav",
+    "Bansal",
+    "Jain",
+    "Goyal",
+    "Khanna",
+    "Mehta",
+    "Kapoor",
+    "Malhotra",
+    "Arora",
+    "Saxena",
+    "Srivastava",
+    "Mathur",
+    "Joshi",
+  ],
+};
+
+const random = (arr) => arr[Math.floor(Math.random() * arr.length)];
+
+export function getRandomIndianName() {
+  const gender = Math.random() > 0.5 ? "male" : "female";
+
+  if (gender === "male") {
+    const firstName = random(HINDU_NAMES.maleFirst);
+    const lastName = random(HINDU_NAMES.maleLast);
+
+    return {
+      salutation: "Mr",
+      firstName,
+      lastName,
+      fullName: `Mr. ${firstName} ${lastName}`,
+      gender,
+    };
+  }
+
+  const firstName = random(HINDU_NAMES.femaleFirst);
+  const lastName = random(HINDU_NAMES.femaleLast);
+
+  return {
+    salutation: "Ms",
+    firstName,
+    lastName,
+    fullName: `Ms. ${firstName} ${lastName}`,
+    gender: "female",
+  };
+}

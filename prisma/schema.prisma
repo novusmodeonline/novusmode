@@ -1,0 +1,383 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+/**
+ * -------------------- PRODUCT SYSTEM --------------------
+ */
+
+model Product {
+  id             String   @id @default(cuid())
+  title          String
+  slug           String   @unique
+  description    String
+  price          Float
+  rating         Int
+  manufacturer   String
+  categoryId     String
+  subCategoryId  String
+  mainImage      String
+  inStock        Int
+  availableSizes String?
+  defaultSize    String?
+  selectedSize   String?
+  sizeMetric     String?
+  keyFeatures    Json?
+  stockOnHand    Int      @default(0)
+  isFeatured     Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  cartItems      CartItem[]
+  items          OrderItem[]
+  images         ProductImage[]
+  Wishlist       Wishlist[]
+  customerOrders customer_order_product[]
+
+  subCategory SubCategory @relation(fields: [subCategoryId], references: [id])
+  category    Category    @relation(fields: [categoryId], references: [id])
+}
+
+model ProductImage {
+  id        String  @id @default(cuid())
+  url       String
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+/**
+ * -------------------- USER --------------------
+ */
+
+model User {
+  id            String    @id @default(cuid())
+  name          String
+  email         String    @unique
+  password      String
+  phone         String?
+  profileImage  String?
+  dob           DateTime?
+  gender        Gender?
+  role          Role      @default(USER)
+  termsAccepted Boolean   @default(false)
+  referralCode  String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  couponUsages CouponUsage[]
+  addresses    Address[]
+  cart         Cart?
+  Wishlist     Wishlist[]
+  orders       Order[]
+
+  @@map("users")
+}
+
+/**
+ * -------------------- ADDRESS --------------------
+ */
+
+model Address {
+  id        String   @id @default(uuid())
+  userId    String? // ✅ optional for guest orders
+  name      String
+  phone     String
+  address1  String
+  address2  String?
+  city      String
+  state     String
+  pincode   String
+  country   String   @default("India")
+  landmark  String?
+  label     String?
+  isDefault Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user   User?   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  orders Order[]
+}
+
+/**
+ * -------------------- ORDER (SINGLE SOURCE OF TRUTH) --------------------
+ */
+
+model Order {
+  id        String  @id
+  userId    String?
+  addressId String // ✅ structured address
+  status    String  @default("pending")
+  amount    Int
+
+  // 🔹 Amount breakdown (NEW)
+  originalAmount Int? // cart total before coupon
+  discountAmount Int  @default(0)
+  finalAmount    Int? // amount sent to Pay10
+  shippingAmount Int  @default(0)
+
+  couponCode String?
+  couponId   String?
+
+  // ✅ Structured Contact (replaced JSON)
+  email String
+  phone String
+
+  paymentMethod String?
+  paymentId     String?
+
+  source        String  @default("internal")
+  externalRefId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  products OrderItem[]
+  coupon   Coupon?     @relation(fields: [couponId], references: [id])
+  payment  Payment?
+  user     User?       @relation(fields: [userId], references: [id])
+  address  Address     @relation(fields: [addressId], references: [id])
+}
+
+/**
+ * -------------------- ORDER ITEMS --------------------
+ */
+
+model OrderItem {
+  id           String  @id @default(cuid())
+  orderId      String
+  productId    String
+  title        String
+  slug         String
+  mainImage    String
+  price        Float
+  selectedSize String?
+  sizeMetric   String?
+  quantity     Int
+
+  product Product @relation(fields: [productId], references: [id])
+  order   Order   @relation(fields: [orderId], references: [id])
+}
+
+/**
+ * -------------------- PAYMENT SYSTEM --------------------
+ */
+
+model Payment {
+  id                String    @id @default(cuid())
+  orderId           String    @unique
+  method            String
+  status            String    @default("initiated")
+  amount            Int
+  gatewayId         String?
+  gatewayOrderId    String?
+  responseCode      String?
+  responseMessage   String?
+  payerAddress      String?
+  payerName         String?
+  pgRefNum          String?
+  rrn               String?
+  qrString          String?
+  rawResponse       Json?
+  webhookVerified   Boolean   @default(false)
+  webhookReceivedAt DateTime?
+  processedAt       DateTime?
+  retryCount        Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  order          Order            @relation(fields: [orderId], references: [id])
+  PaymentAttempt PaymentAttempt[]
+}
+
+model PaymentAttempt {
+  id         String   @id @default(cuid())
+  paymentId  String?
+  attemptAt  DateTime @default(now())
+  direction  String
+  endpoint   String
+  statusCode Int?
+  request    Json?
+  response   Json?
+  note       String?
+
+  payment Payment? @relation(fields: [paymentId], references: [id])
+}
+
+/**
+ * -------------------- CART --------------------
+ */
+
+model Cart {
+  id        String     @id @default(uuid())
+  userId    String     @unique
+  updatedAt DateTime   @updatedAt
+  user      User       @relation(fields: [userId], references: [id])
+  items     CartItem[]
+}
+
+model CartItem {
+  id           String @id @default(uuid())
+  cartId       String
+  productId    String
+  quantity     Int
+  selectedSize String @default("")
+
+  product Product @relation(fields: [productId], references: [id])
+  cart    Cart    @relation(fields: [cartId], references: [id])
+
+  @@unique([cartId, productId, selectedSize])
+}
+
+/**
+ * -------------------- WISHLIST --------------------
+ */
+
+model Wishlist {
+  id        String @id @default(uuid())
+  productId String
+  userId    String
+
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+  product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, productId], name: "userId_productId")
+}
+
+/**
+ * -------------------- CATEGORIES --------------------
+ */
+
+model Category {
+  id                String  @id
+  name              String
+  slug              String  @unique
+  description       String?
+  isSpecialCategory Boolean
+  badge             String
+
+  products      Product[]
+  subcategories SubCategory[]
+}
+
+model SubCategory {
+  id         String @id
+  name       String
+  slug       String
+  categoryId String
+
+  products Product[]
+  category Category  @relation(fields: [categoryId], references: [id])
+}
+
+/**
+ * -------------------- STATIC/UTILITY MODELS --------------------
+ */
+
+model NewsletterSignup {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model Audit {
+  id        String   @id @default(cuid())
+  actorId   String?
+  action    String
+  targetId  String?
+  meta      Json?
+  createdAt DateTime @default(now())
+}
+
+/**
+ * -------------------- LEGACY CUSTOMER ORDER (UNCHANGED) --------------------
+ */
+
+model Customer_order {
+  id          String    @id @default(uuid())
+  name        String
+  lastname    String
+  phone       String
+  email       String
+  company     String
+  address     String
+  apartment   String
+  postalCode  String
+  dateTime    DateTime? @default(now())
+  status      String
+  city        String
+  country     String
+  orderNotice String?
+  total       Int
+
+  products customer_order_product[]
+}
+
+model customer_order_product {
+  id              String @id @default(uuid())
+  customerOrderId String
+  productId       String
+  quantity        Int
+  price           Float
+  rating          Int
+  slug            String
+  mainImage       String
+
+  product       Product        @relation(fields: [productId], references: [id])
+  customerOrder Customer_order @relation(fields: [customerOrderId], references: [id])
+}
+
+model Coupon {
+  id       String  @id @default(cuid())
+  code     String  @unique // MAGICDISCOUNT
+  isActive Boolean @default(true)
+
+  // 🔒 Rule identifiers (logic lives in code)
+  ruleType String // e.g. "MAGIC_CLAMP_5000"
+
+  // 🔐 Safety & governance
+  maxUses   Int? // optional global cap
+  usedCount Int  @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders Order[]
+}
+
+model CouponUsage {
+  id     String   @id @default(cuid())
+  userId String
+  coupon String
+  usedAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id])
+
+  @@unique([userId, coupon])
+}
+
+/**
+ * -------------------- ENUMS --------------------
+ */
+
+enum Role {
+  USER
+  ADMIN
+  PRODUCTCREATOR
+}
+
+enum Gender {
+  MALE
+  FEMALE
+  OTHER
+}
+
+enum OrderSource {
+  INTERNAL
+  EXTERNAL
+}
