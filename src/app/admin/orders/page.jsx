@@ -13,8 +13,6 @@ async function getOrders(searchParams) {
 
   const url = `${protocol}://${host}/api/admin/orders?${query}`;
 
-  console.log("Resolved API URL:", url);
-
   const res = await fetch(url, { cache: "no-store" });
 
   if (!res.ok) {

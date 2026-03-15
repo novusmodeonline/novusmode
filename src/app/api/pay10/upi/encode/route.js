@@ -26,7 +26,6 @@ function mask(obj = {}) {
 
 export async function POST(req) {
   try {
-    console.log("this");
     const body = await req.json();
     const {
       orderId,
@@ -45,7 +44,6 @@ export async function POST(req) {
         { status: 400 }
       );
     }
-    console.log("this");
     const PAY_ID = process.env.PAY10_PAY_ID;
     const SECRET = process.env.PAY10_SALT;
     const ENC_KEY = process.env.PAY10_ENCRYPTION_KEY;
@@ -86,13 +84,10 @@ export async function POST(req) {
 
     // hash
     const hashInput = buildHashString(params, SECRET);
-    console.log("Sring : ", hashInput);
     const HASH = sha256(hashInput);
     // plaintext and encrypt
     const plain = buildHashString({ ...params, HASH });
-    console.log("Plain Text : ", plain);
     const ENCDATA = encryptAES(plain, ENC_KEY);
-    console.log("ENCDATA  :", ENCDATA);
 
     return NextResponse.json({
       PAY_ID,

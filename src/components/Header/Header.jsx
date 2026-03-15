@@ -1,6 +1,6 @@
 "use client";
+import React, { useState, useRef, useEffect } from "react";
 import { usePathname } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
 import { FiUser, FiMenu, FiX, FiSearch } from "react-icons/fi";
 import Image from "next/image";
 import Link from "next/link";
@@ -13,13 +13,30 @@ import { siteTheme } from "@/config/theme";
 import "./header.css";
 
 function Header({ categoryMenuSlot }) {
-  const { data: session, status } = useSession();
-  const pathname = usePathname();
-  const { wishQuantity } = useWishlistStore();
-
   const [menuOpen, setMenuOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
+
+  // Close hamburger menu on mobile when clicking outside or on any header button
+  useEffect(() => {
+    if (!menuOpen) return;
+    const handleClickOutside = (e) => {
+      if (window.innerWidth < 768) {
+        const menu = document.querySelector('nav.md-hidden');
+        // Close menu if click is outside menu
+        if (menu && !menu.contains(e.target)) {
+          setMenuOpen(false);
+        }
+      }
+    };
+    // Use capture phase to ensure event fires before menu's own handlers
+    document.addEventListener('mousedown', handleClickOutside, true);
+    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+  }, [menuOpen]);
+
+  const { data: session, status } = useSession();
+  const pathname = usePathname();
+  const { wishQuantity } = useWishlistStore();
 
   const profileRef = useRef(null);
   const isLoggedIn = session?.user;
@@ -259,42 +276,39 @@ function Header({ categoryMenuSlot }) {
 
       {/* Desktop Search Bar (already above) */}
 
-      {/* Men/Women/Kids Menu */}
+      {/* Men/Women/Kids Menu - Desktop */}
       <nav className="hidden md:flex justify-center gap-10 py-2 bg-white text-black text-sm font-medium px-6 md:px-24">
         {categoryMenuSlot}
       </nav>
 
-      {/* Mobile Menu */}
+      {/* Mobile Menu - Render same as desktop, add menu close handler */}
       {menuOpen && (
         <nav className="md:hidden bg-white border-t text-sm text-black px-6">
           <div className="py-2">
-            {["Men", "Women", "Kids"].map((section) => (
-              <details key={section} className="mb-2">
-                <summary className="font-medium cursor-pointer">
-                  {section}
-                </summary>
-                <div className="pl-4 mt-1">
-                  <Link
-                    href={`/${section.toLowerCase()}/tops`}
-                    className="block py-1"
-                  >
-                    Tops
-                  </Link>
-                  <Link
-                    href={`/${section.toLowerCase()}/bottoms`}
-                    className="block py-1"
-                  >
-                    Bottoms
-                  </Link>
-                  <Link
-                    href={`/${section.toLowerCase()}/accessories`}
-                    className="block py-1"
-                  >
-                    Accessories
-                  </Link>
-                </div>
-              </details>
-            ))}
+            {React.Children.map(categoryMenuSlot, (child) => {
+              // If child is a details element (mobile category), add close handler to subcategory links
+              if (child && child.type === 'details') {
+                return React.cloneElement(child, {},
+                  React.Children.map(child.props.children, (subChild) => {
+                    if (subChild && subChild.type === 'div') {
+                      // Subcategory container
+                      return React.cloneElement(subChild, {},
+                        React.Children.map(subChild.props.children, (link) => {
+                          if (link && link.type === Link) {
+                            return React.cloneElement(link, {
+                              onClick: () => setMenuOpen(false),
+                            });
+                          }
+                          return link;
+                        })
+                      );
+                    }
+                    return subChild;
+                  })
+                );
+              }
+              return child;
+            })}
           </div>
         </nav>
       )}

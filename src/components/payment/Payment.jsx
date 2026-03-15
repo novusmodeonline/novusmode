@@ -168,9 +168,9 @@ export default function Payment({
           throw new Error(data.error || "Failed to place COD order");
         }
         // Success: clear cart and redirect — same as Pay10 flow
-        clearCart();
+        
         onPay && onPay({ method: "cod", orderId });
-        router.push(`/order-confirmation?orderId=${orderId}&clearCart=1`);
+        window.location.href = `/order-confirmation?orderId=${orderId}&clearCart=1`;
       } catch (err) {
         console.error("COD ORDER ERROR:", err);
         toast.error(err.message || "Failed to place COD order. Please try again.");

@@ -37,7 +37,6 @@ async function forwardToPartner(payload, prismaPaymentId) {
 
   for (let attempt = 1; attempt <= 3; attempt++) {
     try {
-      console.log("Hitting Partner URL!");
       const res = await fetch(url, {
         method: "POST",
         headers: {
@@ -48,7 +47,6 @@ async function forwardToPartner(payload, prismaPaymentId) {
       });
 
       const text = await res.text();
-      console.log("Partner callackback response : ", text);
       // ✅ Log every forward attempt
       await prisma.paymentAttempt.create({
         data: {

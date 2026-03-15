@@ -37,7 +37,6 @@ export async function POST(req) {
 
     // 🔑 Get authoritative cart total
     const cartTotal = await getCartTotal(session.user.id);
-    console.log("cartyTotal : ", cartTotal);
     // 🎯 Apply rule from code
     const result = applyCouponRule(coupon.ruleType, cartTotal);
 

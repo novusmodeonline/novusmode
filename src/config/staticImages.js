@@ -22,7 +22,7 @@ export const HeroCarouselImages = [
   },
   {
     image: "/homepage/women.png",
-    imageMobile: "/homepage/women-mobile.jpg",
+    imageMobile: "/homepage/women-mobile.png",
     headline: "Chic & Timeless", // New headline
     description: "Discover the season's must-haves for every woman.", // New description
     cta: {
@@ -32,7 +32,7 @@ export const HeroCarouselImages = [
   },
   {
     image: "/homepage/accessories.png",
-    imageMobile: "/homepage/accessories-mobile.jpg",
+    imageMobile: "/homepage/accessories-mobile.png",
     headline: "Complete Your Look", // New headline
     description: "From bold to classic, find the perfect accessories.", // New description
     cta: {

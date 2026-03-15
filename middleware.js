@@ -7,7 +7,6 @@ const SAFE_IMAGE_REGEX = /^[a-zA-Z0-9/_-]+\.(png|jpg|jpeg|webp|gif)$/i;
 const BLOCKED = /(\.\.|;|\||`|\$|>|<|%7C|%3B|%60|%24|%3E|%3C)/i;
 
 export function middleware(req) {
-  console.log("middleware working?");
   let pathname = req.nextUrl.pathname;
 
   // always run middleware for every request

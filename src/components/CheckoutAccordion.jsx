@@ -99,13 +99,14 @@ export default function CheckoutAccordion() {
       const path = window.location.pathname;
       if (
         (!products || products.length === 0) &&
-        !path.includes("order-confirmation")
+        !path.includes("order-confirmation") &&
+        !orderId
       ) {
         toast.error("You don't have items in your cart");
         router.replace("/cart");
       }
     }
-  }, [hasHydrated, isHydrating, products, router]);
+  }, [hasHydrated, isHydrating, products, router, orderId]);
 
   const [completed, setCompleted] = useState({
     contact: false,
