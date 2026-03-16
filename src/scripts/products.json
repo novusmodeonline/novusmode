@@ -111,7 +111,7 @@
     "subCategoryId": "shirts-men",
     "mainImage": "/men/product_005.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Heavyweight Cotton Jersey",
       "men loungewear",
@@ -136,7 +136,7 @@
     "subCategoryId": "shirts-men",
     "mainImage": "/men/product_006.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 95% Bamboo Modal, 5% Elastane",
       "men loungewear",
@@ -186,7 +186,7 @@
     "subCategoryId": "shirts-men",
     "mainImage": "/men/product_008.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Waffle-Knit Cotton",
       "men loungewear",
@@ -286,7 +286,7 @@
     "subCategoryId": "socks-men",
     "mainImage": "/men/product_012.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 70% Cotton, 25% Microfibre Nylon, 5% Spandex",
       "no-show socks",
@@ -336,7 +336,7 @@
     "subCategoryId": "denims-men",
     "mainImage": "/men/product_014.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 98% Cotton Denim, 2% Elastane",
       "slim fit jeans",
@@ -411,7 +411,7 @@
     "subCategoryId": "denims-men",
     "mainImage": "/men/product_017.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 99% Cotton Denim, 1% Elastane",
       "relaxed fit jeans",
@@ -461,7 +461,7 @@
     "subCategoryId": "shorts-men",
     "mainImage": "/men/product_019.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Garment-Washed Cotton Twill",
       "cargo shorts",
@@ -536,7 +536,7 @@
     "subCategoryId": "shorts-men",
     "mainImage": "/men/product_022.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Ripstop Polyester with Mesh Lining",
       "athletic shorts",
@@ -636,7 +636,7 @@
     "subCategoryId": "tshirts-men",
     "mainImage": "/men/product_026.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 50% Cotton, 38% Viscose, 12% Elastane",
       "v-neck t-shirt",
@@ -661,7 +661,7 @@
     "subCategoryId": "tshirts-men",
     "mainImage": "/men/product_027.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Heavyweight Cotton (200 GSM)",
       "graphic t-shirt",
@@ -1236,7 +1236,7 @@
     "subCategoryId": "jackets-men",
     "mainImage": "/men/product_050.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 70% Viscose, 25% Nylon, 5% Elastane Ponte Knit",
       "knit blazer",
@@ -1636,7 +1636,7 @@
     "subCategoryId": "shirts-women",
     "mainImage": "/women/product_066.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Pure Linen",
       "culottes",
@@ -1686,7 +1686,7 @@
     "subCategoryId": "shirts-women",
     "mainImage": "/women/product_068.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 75% Nylon, 25% Spandex",
       "leggings",
@@ -1711,7 +1711,7 @@
     "subCategoryId": "fulldresses-women",
     "mainImage": "/women/product_069.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Rayon Viscose",
       "maxi dress",
@@ -1986,7 +1986,7 @@
     "subCategoryId": "jackets-women",
     "mainImage": "/women/product_080.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Genuine Full-Grain Lambskin Leather",
       "biker jacket",
@@ -2136,7 +2136,7 @@
     "subCategoryId": "shirts-women",
     "mainImage": "/women/product_086.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Genuine Croc-Embossed Lambskin Leather",
       "clutch",
@@ -2186,7 +2186,7 @@
     "subCategoryId": "shirts-women",
     "mainImage": "/women/product_088.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Genuine Italian-Finish Nappa Leather",
       "hobo bag",
@@ -2211,7 +2211,7 @@
     "subCategoryId": "shirts-women",
     "mainImage": "/women/product_089.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Patent Genuine Leather Upper, Leather Sole",
       "stiletto heels",
@@ -2411,7 +2411,7 @@
     "subCategoryId": "shirts-women",
     "mainImage": "/women/product_097.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 50% Wool, 50% Acrylic",
       "cardigan",
@@ -2586,7 +2586,7 @@
     "subCategoryId": "cord-kids",
     "mainImage": "/children/product_104.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 80% Cotton, 20% Polyester Velour",
       "kids tracksuit",
@@ -2686,7 +2686,7 @@
     "subCategoryId": "shirts-kids",
     "mainImage": "/children/product_108.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Combed Cotton Blend",
       "school socks",
@@ -2736,7 +2736,7 @@
     "subCategoryId": "shirts-kids",
     "mainImage": "/children/product_110.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: CoolMax Polyester-Cotton Blend",
       "sports socks kids",
@@ -2786,7 +2786,7 @@
     "subCategoryId": "tshirts-kids",
     "mainImage": "/children/product_112.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Bio-Washed Cotton",
       "dinosaur tshirt",
@@ -2861,7 +2861,7 @@
     "subCategoryId": "tshirts-kids",
     "mainImage": "/children/product_115.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Slub Cotton",
       "colour block tshirt",
@@ -2911,7 +2911,7 @@
     "subCategoryId": "shorts-kids",
     "mainImage": "/children/product_117.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Cotton Denim with Elastane",
       "kids jeans",
@@ -2961,7 +2961,7 @@
     "subCategoryId": "shirts-kids",
     "mainImage": "/children/product_119.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Cotton Twill",
       "cargo pants kids",
@@ -3011,7 +3011,7 @@
     "subCategoryId": "cord-kids",
     "mainImage": "/children/product_121.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Cotton Corduroy with Elastane",
       "corduroy pants kids",
@@ -3036,7 +3036,7 @@
     "subCategoryId": "shorts-kids",
     "mainImage": "/children/product_122.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Cotton Denim with Elastane",
       "denim shorts kids",
@@ -3136,7 +3136,7 @@
     "subCategoryId": "shirts-kids",
     "mainImage": "/children/product_126.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: 100% Cotton Voile (Lined)",
       "floral dress girls",
@@ -3261,7 +3261,7 @@
     "subCategoryId": "cord-kids",
     "mainImage": "/children/product_131.png",
     "inStock": 50,
-    "isFeatured": false,
+    "isFeatured": true,
     "keyFeatures": [
       "Material: Polyester-Viscose Blend (Blazer/Trousers), Cotton (Shirt)",
       "boys suit",

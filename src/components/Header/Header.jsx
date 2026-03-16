@@ -17,26 +17,30 @@ function Header({ categoryMenuSlot }) {
   const [profileOpen, setProfileOpen] = useState(false);
   const [mobileSearchOpen, setMobileSearchOpen] = useState(false);
 
-  // Close hamburger menu on mobile when clicking outside or on any header button
+  const menuRef = useRef(null);
+
+  // Close mobile menu when clicking outside — same pattern as MobileNavMenu.jsx
   useEffect(() => {
     if (!menuOpen) return;
     const handleClickOutside = (e) => {
-      if (window.innerWidth < 768) {
-        const menu = document.querySelector('nav.md-hidden');
-        // Close menu if click is outside menu
-        if (menu && !menu.contains(e.target)) {
-          setMenuOpen(false);
-        }
+      if (menuRef.current && !menuRef.current.contains(e.target)) {
+        setMenuOpen(false);
       }
     };
-    // Use capture phase to ensure event fires before menu's own handlers
-    document.addEventListener('mousedown', handleClickOutside, true);
-    return () => document.removeEventListener('mousedown', handleClickOutside, true);
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [menuOpen]);
 
   const { data: session, status } = useSession();
   const pathname = usePathname();
   const { wishQuantity } = useWishlistStore();
+
+  // Close all overlays on route change — catches every link regardless of nesting
+  useEffect(() => {
+    setMenuOpen(false);
+    setProfileOpen(false);
+    setMobileSearchOpen(false);
+  }, [pathname]);
 
   const profileRef = useRef(null);
   const isLoggedIn = session?.user;
@@ -281,36 +285,45 @@ function Header({ categoryMenuSlot }) {
         {categoryMenuSlot}
       </nav>
 
-      {/* Mobile Menu - Render same as desktop, add menu close handler */}
+      {/* Mobile Menu — absolutely positioned so it overlays content without displacing it */}
       {menuOpen && (
-        <nav className="md:hidden bg-white border-t text-sm text-black px-6">
-          <div className="py-2">
-            {React.Children.map(categoryMenuSlot, (child) => {
-              // If child is a details element (mobile category), add close handler to subcategory links
-              if (child && child.type === 'details') {
-                return React.cloneElement(child, {},
-                  React.Children.map(child.props.children, (subChild) => {
-                    if (subChild && subChild.type === 'div') {
-                      // Subcategory container
-                      return React.cloneElement(subChild, {},
-                        React.Children.map(subChild.props.children, (link) => {
-                          if (link && link.type === Link) {
-                            return React.cloneElement(link, {
-                              onClick: () => setMenuOpen(false),
-                            });
-                          }
-                          return link;
-                        })
-                      );
-                    }
-                    return subChild;
-                  })
-                );
-              }
-              return child;
-            })}
-          </div>
-        </nav>
+        <>
+          {/* Backdrop: darkens the page behind the menu; clicking it closes the menu */}
+          <div
+            className="fixed inset-0 z-40 bg-black/30 md:hidden"
+            onClick={() => setMenuOpen(false)}
+            aria-hidden="true"
+          />
+          <nav
+            ref={menuRef}
+            className="absolute top-full left-0 w-full z-50 md:hidden bg-white border-t shadow-lg text-sm text-black px-6"
+          >
+            <div className="py-2">
+              {React.Children.map(categoryMenuSlot, (child) => {
+                if (child && child.type === 'details') {
+                  return React.cloneElement(child, {},
+                    React.Children.map(child.props.children, (subChild) => {
+                      if (subChild && subChild.type === 'div') {
+                        return React.cloneElement(subChild, {},
+                          React.Children.map(subChild.props.children, (link) => {
+                            if (link && link.type === Link) {
+                              return React.cloneElement(link, {
+                                onClick: () => setMenuOpen(false),
+                              });
+                            }
+                            return link;
+                          })
+                        );
+                      }
+                      return subChild;
+                    })
+                  );
+                }
+                return child;
+              })}
+            </div>
+          </nav>
+        </>
       )}
     </header>
   );

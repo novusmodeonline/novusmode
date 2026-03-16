@@ -53,26 +53,38 @@ const CategoryMenu = async () => {
                 </div>
               )}
             </div>
-            {/* Mobile: click to expand subcategories */}
-            <details className="md:hidden mb-2">
-              <summary className="font-medium cursor-pointer">
+            {/* Mobile: plain link if no subs, expandable details if subs exist */}
+            {subs.length === 0 ? (
+              <Link
+                href={`/${sectionSlug}`}
+                className="md:hidden flex items-center gap-2 font-medium mb-2 py-2"
+              >
+                {/* Invisible spacer matches width of › arrow in expandable items */}
+                <span className="w-4 shrink-0" aria-hidden="true" />
                 {section.name}
-              </summary>
-              <div className="pl-4 mt-1">
-                {subs.map((sub) => {
-                  const subSlug = slugify(sub.slug || sub.name);
-                  return (
-                    <Link
-                      key={sub.id}
-                      href={`/${sectionSlug}/${subSlug}`}
-                      className="block py-1"
-                    >
-                      {sub.name}
-                    </Link>
-                  );
-                })}
-              </div>
-            </details>
+              </Link>
+            ) : (
+              <details className="md:hidden mb-2 [&>summary]:list-none [&>summary::-webkit-details-marker]:hidden">
+                <summary className="flex items-center gap-2 font-medium cursor-pointer py-2">
+                  <span className="w-4 shrink-0 text-center select-none">›</span>
+                  {section.name}
+                </summary>
+                <div className="pl-6 mt-1">
+                  {subs.map((sub) => {
+                    const subSlug = slugify(sub.slug || sub.name);
+                    return (
+                      <Link
+                        key={sub.id}
+                        href={`/${sectionSlug}/${subSlug}`}
+                        className="block py-1"
+                      >
+                        {sub.name}
+                      </Link>
+                    );
+                  })}
+                </div>
+              </details>
+            )}
           </div>
         );
       })}

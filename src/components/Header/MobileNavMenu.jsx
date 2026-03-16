@@ -16,6 +16,7 @@ export default function MobileNavMenu() {
   const menuRef = useRef(null);
 
   useEffect(() => {
+    console.log("here?")
     if (!menuOpen) return;
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
