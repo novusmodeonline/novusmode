@@ -30,11 +30,11 @@ const HeaderTop = () => {
         <ul className="flex items-center h-full gap-x-5 max-[370px]:text-sm max-[370px]:gap-x-2">
           <li className="flex items-center gap-x-2 font-semibold">
             <FaHeadphones className="text-white" />
-            <span>+381 61 123 321</span>
+            <span>+91 96259 81309</span>
           </li>
           <li className="flex items-center gap-x-2 font-semibold">
             <FaRegEnvelope className="text-white text-xl" />
-            <span>test@email.com</span>
+            <span>novusmodeonline@gmail.com</span>
           </li>
         </ul>
         <ul className="flex items-center gap-x-5 h-full max-[370px]:text-sm max-[370px]:gap-x-2 font-semibold">

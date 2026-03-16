@@ -27,8 +27,8 @@ export default function AboutUsComponent() {
         <section className="space-y-4">
           <h2 className="text-2xl font-semibold text-gray-800">Our Story</h2>
           <p className="text-gray-700 leading-relaxed">
-            Founded in 2025, <strong>NovusMode</strong>(operated by Zorvigo
-            Technology Pvt. Ltd.) was born out of a simple idea — that fashion
+            Founded in 2025, <strong>NovusMode</strong>(operated by OIN GLOBAL
+            SERVICES PVT LTD) was born out of a simple idea — that fashion
             should feel as good as it looks. We started as a small local label
             with a passion for creating high-quality garments that are
             versatile, modern, and made to last.
@@ -76,9 +76,8 @@ export default function AboutUsComponent() {
             ensure it meets our standards of comfort and durability.
           </p>
           <p className="text-gray-700 leading-relaxed">
-            Enjoy seamless shopping with secure payments via{" "}
-            <strong>Pay10 Payment Gateway</strong>, easy returns, and responsive
-            support that’s always ready to help.
+            Enjoy seamless shopping with secure payments, easy returns, and
+            responsive support that’s always ready to help.
           </p>
         </section>
 
@@ -89,20 +88,20 @@ export default function AboutUsComponent() {
             {/* Left: Contact Details */}
             <div className="space-y-3 text-gray-700">
               <p>
-                <strong>Address:</strong> Plot no. A1 D Mall, Netaji Subhash
-                Place, North West Delhi, 110034
+                <strong>Address:</strong> Office No. B-03, Basement, B-103,
+                Sector 2, Noida, Gautambuddha Nagar, Uttar Pradesh - 201301
               </p>
               <p>
                 <strong>Email:</strong>{" "}
                 <a
-                  href="mailto:connect@NovusModeapparels.com"
+                  href="mailto:novusmodeonline@gmail.com"
                   className="text-green-600 underline"
                 >
-                  connect@NovusModeapparels.com
+                  novusmodeonline@gmail.com
                 </a>
               </p>
               <p>
-                <strong>Phone:</strong> +91 99118 01871
+                <strong>Phone:</strong> +91 96259 81309
               </p>
               <p>
                 <strong>Business Hours:</strong> Mon–Fri, 10 AM – 6 PM
@@ -113,7 +112,7 @@ export default function AboutUsComponent() {
             <div className="rounded-xl overflow-hidden shadow-sm border border-gray-200">
               <iframe
                 title="Store Location"
-                src="https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d3499.908811082738!2d77.15072507409698!3d28.692374281363236!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x390d031c9a539885%3A0x6eeaa336893a5c65!2sD%20Mall!5e0!3m2!1sen!2sin!4v1763021899583!5m2!1sen!2sin"
+                src="https://www.google.com/maps/embed?pb=!1m16!1m12!1m3!1d7006.8076646202435!2d77.31024634030702!3d28.58765962363177!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!2m1!1sOffice%20No.%20B-03%2C%20Basement%2C%20B-103%2C%20Sector%202%2C%20Noida%2C%20Gautambuddha%20Nagar%2C%20Uttar%20Pradesh%20-%20201301!5e0!3m2!1sen!2sin!4v1773654393630!5m2!1sen!2sin"
                 width="100%"
                 height="250"
                 style={{ border: 0 }}

@@ -15,9 +15,9 @@ export default function TermsAndConditionsPage() {
 
         <section className="space-y-6 text-gray-700 leading-relaxed">
           <p>
-            Welcome to <strong>NovusMode</strong>(operated by Zorvigo Technology
-            Pvt. Ltd.) ("we," "our," "us"). By accessing or purchasing from our
-            website <strong>NovusModeapparels.com</strong> ("Site"), you agree
+            Welcome to <strong>NovusMode</strong>(operated by OIN GLOBAL SERVICES
+            PVT LTD) ("we," "our," "us"). By accessing or purchasing from our
+            website <strong>novusmode.com</strong> ("Site"), you agree
             to comply with and be bound by these Terms and Conditions. Please
             read them carefully before using our services.
           </p>
@@ -58,8 +58,8 @@ export default function TermsAndConditionsPage() {
               <strong>Cash on Delivery (COD)</strong>
             </li>
             <li>
-              <strong>Online payments via Pay10 Payment Gateway</strong> — we
-              accept major debit/credit cards, UPI, and net banking.
+              <strong>Online payments</strong> — we accept major debit/credit
+              cards, UPI, and net banking.
             </li>
           </ul>
 
@@ -159,16 +159,16 @@ export default function TermsAndConditionsPage() {
             <li>
               Email:{" "}
               <a
-                href="mailto:connect@NovusModeapparels.com"
+                href="mailto:novusmodeonline@gmail.com"
                 className="text-green-600"
               >
-                connect@NovusModeapparels.com
+                novusmodeonline@gmail.com
               </a>
             </li>
-            <li>Phone: +91 99118 01871</li>
+            <li>Phone: +91 96259 81309</li>
             <li>
-              Address: Plot no. A1 D Mall, Netaji Subhash Place, North West
-              Delhi, 110034
+              Address: Office No. B-03, Basement, B-103, Sector 2, Noida,
+              Gautambuddha Nagar, Uttar Pradesh - 201301
             </li>
           </ul>
         </section>

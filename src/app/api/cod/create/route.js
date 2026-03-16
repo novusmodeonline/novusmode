@@ -32,7 +32,7 @@ export async function POST(req) {
             return NextResponse.json({ error: "Forbidden" }, { status: 403 });
         }
 
-        // Create / upsert Payment record for COD — mirrors Pay10 flow
+        // Create / upsert Payment record for COD
         const payment = await prisma.payment.upsert({
             where: { orderId },
             update: {
@@ -58,7 +58,7 @@ export async function POST(req) {
             },
         });
 
-        // Log a payment attempt for audit trail (same as Pay10)
+        // Log a payment attempt for audit trail
         await prisma.paymentAttempt.create({
             data: {
                 paymentId: payment.id,

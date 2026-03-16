@@ -64,12 +64,12 @@ export default function RefundReturnPolicyPage() {
             <li>
               Contact our support team within the returns window at{" "}
               <a
-                href="mailto:connect@NovusModeapparels.com"
+                href="mailto:novusmodeonline@gmail.com"
                 className="text-green-600 underline"
               >
-                connect@NovusModeapparels.com
+                novusmodeonline@gmail.com
               </a>{" "}
-              or call +91 99118 01871.
+              or call +91 96259 81309.
             </li>
             <li>
               Provide your order number, product details, photos showing the
@@ -110,10 +110,9 @@ export default function RefundReturnPolicyPage() {
           </p>
           <p>
             - <strong>Refunds for Prepaid Orders:</strong> Refunds will be
-            issued to the original payment method. For online payments via{" "}
-            <strong>Pay10 Payment Gateway</strong>, refunds are processed
-            through the gateway and may take 5–10 business days to reflect
-            depending on your bank or payment provider.
+            issued to the original payment method. For online payments, refunds
+            are processed through the gateway and may take 5–10 business days to
+            reflect depending on your bank or payment provider.
             <br />- <strong>Refunds for COD Orders:</strong> COD refunds will be
             issued via bank transfer. Please provide your bank details when
             requesting the refund.
@@ -185,16 +184,16 @@ export default function RefundReturnPolicyPage() {
             <li>
               Email:{" "}
               <a
-                href="mailto:connect@NovusModeapparels.com"
+                href="mailto:novusmodeonline@gmail.com"
                 className="text-green-600"
               >
-                connect@NovusModeapparels.com
+                novusmodeonline@gmail.com
               </a>
             </li>
-            <li>Phone: +91 99118 01871</li>
+            <li>Phone: +91 96259 81309</li>
             <li>
-              Address: Plot no. A1 D Mall, Netaji Subhash Place, North West
-              Delhi, 110034
+              Address: Office No. B-03, Basement, B-103, Sector 2, Noida,
+              Gautambuddha Nagar, Uttar Pradesh - 201301
             </li>
           </ul>
 

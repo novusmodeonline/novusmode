@@ -117,7 +117,7 @@ model Order {
   // 🔹 Amount breakdown (NEW)
   originalAmount Int? // cart total before coupon
   discountAmount Int  @default(0)
-  finalAmount    Int? // amount sent to Pay10
+  finalAmount    Int? // final amount to be paid
   shippingAmount Int  @default(0)
 
   couponCode String?

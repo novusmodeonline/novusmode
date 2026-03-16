@@ -167,7 +167,7 @@ export default function Payment({
         if (!res.ok || !data.success) {
           throw new Error(data.error || "Failed to place COD order");
         }
-        // Success: clear cart and redirect — same as Pay10 flow
+        // Success: clear cart and redirect
         
         onPay && onPay({ method: "cod", orderId });
         window.location.href = `/order-confirmation?orderId=${orderId}&clearCart=1`;

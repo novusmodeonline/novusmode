@@ -1,8 +1,8 @@
 export const COMPANY = {
-  name: "Zorvigo Technology Pvt. Ltd.",
-  address: "Plot no. A1 D Mall, Netaji Subhash Place, North West Delhi, 110034",
-  gstin: "07AACCZ6526H1Z4",
-  email: "connect@NovusModeapparels.com",
+  name: "OIN GLOBAL SERVICES PVT LTD",
+  address: "Office No. B-03, Basement, B-103, Sector 2, Noida, Gautambuddha Nagar, Uttar Pradesh - 201301",
+  gstin: "09AAECO9687L1ZG",
+  email: "novusmodeonline@gmail.com",
   website: "www.novusmode.com/",
   authorizedSignatory: "Authorized Signatory",
   signatureImage: "/invoice/signature.png",

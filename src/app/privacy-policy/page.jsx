@@ -17,11 +17,11 @@ export default function PrivacyPolicyPage() {
 
         <section className="space-y-6 text-gray-700 leading-relaxed">
           <p>
-            At <strong>NovusMode</strong>(operated by Zorvigo Technology Pvt.
-            Ltd.) ("we," "our," or "us"), your privacy is important to us. This
+            At <strong>NovusMode</strong>(operated by OIN GLOBAL SERVICES PVT
+            LTD) ("we," "our," or "us"), your privacy is important to us. This
             Privacy Policy explains how we collect, use, disclose, and safeguard
             your personal information when you visit our website{" "}
-            <strong>NovusModeapparels.com</strong> ("Site") and use our
+            <strong>novusmode.com</strong> ("Site") and use our
             services.
           </p>
 
@@ -71,8 +71,7 @@ export default function PrivacyPolicyPage() {
             3. Payment Information
           </h2>
           <p>
-            We use secure third-party payment gateways such as{" "}
-            <strong>Pay10 Payment Gateway</strong> to process online
+            We use secure third-party payment gateways to process online
             transactions. Your payment details (like card or UPI information)
             are encrypted and handled directly by the payment provider. We do
             not store or have access to your complete payment data.
@@ -171,16 +170,16 @@ export default function PrivacyPolicyPage() {
             <li>
               Email:{" "}
               <a
-                href="mailto:connect@NovusModeapparels.com"
+                href="mailto:novusmodeonline@gmail.com"
                 className="text-green-600"
               >
-                connect@NovusModeapparels.com
+                novusmodeonline@gmail.com
               </a>
             </li>
-            <li>Phone: +91 99118 01871</li>
+            <li>Phone: +91 96259 81309</li>
             <li>
-              Address: Plot no. A1 D Mall, Netaji Subhash Place, North West
-              Delhi, 110034
+              Address: Office No. B-03, Basement, B-103, Sector 2, Noida,
+              Gautambuddha Nagar, Uttar Pradesh - 201301
             </li>
           </ul>
         </section>

@@ -44,7 +44,7 @@ export default async function SiteFooter() {
               </p>
             </span>
             <a
-              href="https://maps.app.goo.gl/nUwYQQcWZHxv6LHf8"
+              href="https://maps.app.goo.gl/8yovSHARyNuvHLAA8"
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-start gap-2 hover:text-white transition-colors text-center md:text-left"
@@ -153,7 +153,7 @@ export default async function SiteFooter() {
       <div className="border-t border-white/20 mt-10 pt-5 text-center text-white/70 text-sm tracking-wide">
         &copy; {new Date().getFullYear()} NovusMode. All rights reserved.
         <span className="mx-2">|</span>
-        <span>Powered By Zorvigo Technology Pvt. Ltd.</span>
+        <span>Powered By OIN GLOBAL SERVICES PVT LTD</span>
         {/* <Link href="/terms" className="hover:underline">
           Terms
         </Link>

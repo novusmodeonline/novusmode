@@ -140,10 +140,9 @@ export default function ShippingDeliveryPolicyPage() {
             8. Prepaid Orders
           </h2>
           <p>
-            All prepaid orders are processed on priority. Payments made via{" "}
-            <strong>Pay10 Payment Gateway</strong> (UPI, credit/debit cards,
-            wallets, or net banking) are securely processed, and confirmation is
-            immediate.
+            All prepaid orders are processed on priority. Payments made via
+            UPI, credit/debit cards, wallets, or net banking are securely
+            processed, and confirmation is immediate.
           </p>
 
           <h2 className="text-xl font-semibold text-gray-800">
@@ -159,10 +158,10 @@ export default function ShippingDeliveryPolicyPage() {
             <li>
               Contact us at{" "}
               <a
-                href="mailto:connect@NovusModeapparels.com"
+                href="mailto:novusmodeonline@gmail.com"
                 className="text-green-600 underline"
               >
-                connect@NovusModeapparels.com
+                novusmodeonline@gmail.com
               </a>{" "}
               with your order number.
             </li>
@@ -236,16 +235,16 @@ export default function ShippingDeliveryPolicyPage() {
             <li>
               Email:{" "}
               <a
-                href="mailto:connect@NovusModeapparels.com"
+                href="mailto:novusmodeonline@gmail.com"
                 className="text-green-600"
               >
-                connect@NovusModeapparels.com
+                novusmodeonline@gmail.com
               </a>
             </li>
-            <li>Phone: +91 99118 01871</li>
+            <li>Phone: +91 96259 81309</li>
             <li>
-              Address: Plot no. A1 D Mall, Netaji Subhash Place, North West
-              Delhi, 110034
+              Address: Office No. B-03, Basement, B-103, Sector 2, Noida,
+              Gautambuddha Nagar, Uttar Pradesh - 201301
             </li>
           </ul>
 
