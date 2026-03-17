@@ -38,7 +38,7 @@ const categories = [
   },
   {
     name: "Footwears",
-    href: "/footwears",
+    href: "/footwear",
     icon: <Footprints className="w-16 h-16 text-green-700" />,
   },
 ];

@@ -62,9 +62,9 @@ export const subcategories = [
     categoryId: "men",
   },
   {
-    id: "footwares-men",
-    name: "Footwares",
-    slug: "footwares-men",
+    id: "footwear-men",
+    name: "Footwear",
+    slug: "footwear-men",
     categoryId: "men",
   },
   {
@@ -116,9 +116,9 @@ export const subcategories = [
     categoryId: "women",
   },
   {
-    id: "footwares-women",
-    name: "Footwares",
-    slug: "footwares-women",
+    id: "footwear-women",
+    name: "Footwear",
+    slug: "footwear-women",
     categoryId: "women",
   },
   {

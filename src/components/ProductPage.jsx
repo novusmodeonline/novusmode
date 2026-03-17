@@ -61,7 +61,7 @@ const ProductPage = async ({ params, searchParams }) => {
               <h2 className="text-3xl font-bold max-sm:text-2xl max-[400px]:text-lg uppercase">
                 {slug?.params?.slug && slug?.params?.slug[0]?.length > 0
                   ? improveCategoryText(slug?.params?.slug[0])
-                  : "All Products"}
+                  : (catg ? improveCategoryText(catg) : "All Products")}
               </h2>
 
               {/* <div className="lg:hidden justify-self-end">

@@ -28,7 +28,8 @@ export async function GET(req) {
         inStock: { [stockMode]: stockValue },
       }),
     ...(featured && { isFeatured: true }),
-    ...(category && !subcategory && { categoryId: `${category}` }),
+    ...(category === "footwear" && !subcategory && { subCategoryId: { contains: "footwear" } }),
+    ...(category && category !== "footwear" && !subcategory && { categoryId: `${category}` }),
     ...(category && subcategory && { subCategoryId: `${subcategory}` }),
     ...(search && {
       OR: [
