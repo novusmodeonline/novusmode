@@ -15,9 +15,9 @@ export default function TermsAndConditionsPage() {
 
         <section className="space-y-6 text-gray-700 leading-relaxed">
           <p>
-            Welcome to <strong>NovusMode</strong>(operated by OIN GLOBAL SERVICES
-            PVT LTD) ("we," "our," "us"). By accessing or purchasing from our
-            website <strong>novusmode.com</strong> ("Site"), you agree
+            Welcome to <strong>NovusMode</strong>(operated by OIN GLOBAL
+            SERVICES PVT LTD) ("we," "our," "us"). By accessing or purchasing
+            from our website <strong>novusmode.com</strong> ("Site"), you agree
             to comply with and be bound by these Terms and Conditions. Please
             read them carefully before using our services.
           </p>
@@ -149,7 +149,7 @@ export default function TermsAndConditionsPage() {
           </h2>
           <p>
             These Terms are governed by the laws of India. Any disputes shall be
-            subject to the courts of New Delhi, India.
+            subject to the courts of Uttar Pradesh, India.
           </p>
 
           <h2 className="text-xl font-semibold text-gray-800">
