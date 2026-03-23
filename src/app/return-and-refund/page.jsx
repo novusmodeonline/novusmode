@@ -65,7 +65,7 @@ export default function RefundReturnPolicyPage() {
               Contact our support team within the returns window at{" "}
               <a
                 href="mailto:novusmodeonline@gmail.com"
-                className="text-green-600 underline"
+                className="text-[var(--color-inverted-text)] underline"
               >
                 novusmodeonline@gmail.com
               </a>{" "}
@@ -185,7 +185,7 @@ export default function RefundReturnPolicyPage() {
               Email:{" "}
               <a
                 href="mailto:novusmodeonline@gmail.com"
-                className="text-green-600"
+                className="text-[var(--color-inverted-text)]"
               >
                 novusmodeonline@gmail.com
               </a>

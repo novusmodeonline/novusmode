@@ -49,6 +49,7 @@ export { default as SectionTitle } from "./SectionTitle";
 export { default as OrderSummary } from "./OrderSummary";
 export { default as PaymentCOD } from "./payment/PaymentCOD";
 export { default as AboutUsComponent } from "./AboutUsComponent";
+export { default as ContactUsComponent } from "./ContactUsComponent";
 export { default as CartClient } from "./CartClient";
 
 // Header components export file

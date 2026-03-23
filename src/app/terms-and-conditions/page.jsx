@@ -122,7 +122,10 @@ export default function TermsAndConditionsPage() {
           </h2>
           <p>
             Your personal data is handled as per our{" "}
-            <a href="/privacy-policy" className="text-green-600 underline">
+            <a
+              href="/privacy-policy"
+              className="text-[var(--color-inverted-text)] underline"
+            >
               Privacy Policy
             </a>
             .
@@ -160,7 +163,7 @@ export default function TermsAndConditionsPage() {
               Email:{" "}
               <a
                 href="mailto:novusmodeonline@gmail.com"
-                className="text-green-600"
+                className="text-[var(--color-inverted-text)]"
               >
                 novusmodeonline@gmail.com
               </a>

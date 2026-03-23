@@ -113,6 +113,11 @@ export default async function SiteFooter() {
                 About Us
               </Link>
             </li>
+            <li>
+              <Link href="/contact-us" className="hover:underline">
+                Contact Us
+              </Link>
+            </li>
             {isLoggedIn && (
               <>
                 <li>

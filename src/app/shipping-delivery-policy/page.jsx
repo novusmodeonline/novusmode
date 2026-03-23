@@ -140,9 +140,9 @@ export default function ShippingDeliveryPolicyPage() {
             8. Prepaid Orders
           </h2>
           <p>
-            All prepaid orders are processed on priority. Payments made via
-            UPI, credit/debit cards, wallets, or net banking are securely
-            processed, and confirmation is immediate.
+            All prepaid orders are processed on priority. Payments made via UPI,
+            credit/debit cards, wallets, or net banking are securely processed,
+            and confirmation is immediate.
           </p>
 
           <h2 className="text-xl font-semibold text-gray-800">
@@ -159,7 +159,7 @@ export default function ShippingDeliveryPolicyPage() {
               Contact us at{" "}
               <a
                 href="mailto:novusmodeonline@gmail.com"
-                className="text-green-600 underline"
+                className="text-[var(--color-inverted-text)] underline"
               >
                 novusmodeonline@gmail.com
               </a>{" "}
@@ -236,7 +236,7 @@ export default function ShippingDeliveryPolicyPage() {
               Email:{" "}
               <a
                 href="mailto:novusmodeonline@gmail.com"
-                className="text-green-600"
+                className="text-[var(--color-inverted-text)]"
               >
                 novusmodeonline@gmail.com
               </a>

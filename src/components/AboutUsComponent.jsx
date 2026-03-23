@@ -14,7 +14,8 @@ export default function AboutUsComponent() {
         {/* Hero Section */}
         <section className="text-center space-y-4">
           <h1 className="text-4xl font-bold text-gray-800">
-            About <span className="text-green-600">NovusMode</span>
+            About{" "}
+            <span className="text-[var(--color-inverted-text)]">NovusMode</span>
           </h1>
           <p className="text-gray-600 max-w-2xl mx-auto">
             Where quality meets comfort. We’re dedicated to crafting clothing
@@ -95,7 +96,7 @@ export default function AboutUsComponent() {
                 <strong>Email:</strong>{" "}
                 <a
                   href="mailto:novusmodeonline@gmail.com"
-                  className="text-green-600 underline"
+                  className="text-[var(--color-inverted-text)] underline"
                 >
                   novusmodeonline@gmail.com
                 </a>

@@ -21,8 +21,7 @@ export default function PrivacyPolicyPage() {
             LTD) ("we," "our," or "us"), your privacy is important to us. This
             Privacy Policy explains how we collect, use, disclose, and safeguard
             your personal information when you visit our website{" "}
-            <strong>novusmode.com</strong> ("Site") and use our
-            services.
+            <strong>novusmode.com</strong> ("Site") and use our services.
           </p>
 
           <h2 className="text-xl font-semibold text-gray-800">
@@ -171,7 +170,7 @@ export default function PrivacyPolicyPage() {
               Email:{" "}
               <a
                 href="mailto:novusmodeonline@gmail.com"
-                className="text-green-600"
+                className="text-[var(--color-inverted-text)]"
               >
                 novusmodeonline@gmail.com
               </a>

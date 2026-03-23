@@ -3,3 +3,42 @@
   color: white;
   padding: 1rem;
 }
+
+/* Mobile Menu Details Animation */
+details {
+  overflow: hidden;
+}
+
+details > summary {
+  cursor: pointer;
+  user-select: none;
+  outline: none;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  transition: opacity 0.2s ease-out;
+}
+
+details > summary:hover {
+  opacity: 0.8;
+}
+
+details > summary::marker {
+  color: rgba(0, 0, 0, 0.5);
+}
+
+/* Content wrapper inside details */
+details > div {
+  max-height: 0;
+  overflow: hidden;
+  opacity: 0;
+  transition:
+    max-height 0.35s ease-out,
+    opacity 0.35s ease-out;
+}
+
+/* When details has open attribute */
+details[open] > div {
+  max-height: 800px;
+  opacity: 1;
+}
