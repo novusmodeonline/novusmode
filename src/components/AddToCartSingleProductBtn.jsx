@@ -4,7 +4,6 @@ import React, { useState } from "react";
 import { useProductStore } from "@/app/_zustand/store";
 import toast from "react-hot-toast";
 import Loader from "@/components/Loader"; // <-- Import your Loader
-import { useRouter, usePathname, useSearchParams } from "next/navigation";
 
 const AddToCartSingleProductBtn = ({
   product,
@@ -14,40 +13,22 @@ const AddToCartSingleProductBtn = ({
 }) => {
   const { addToCart, calculateTotals } = useProductStore();
   const [loading, setLoading] = useState(false);
-  const router = useRouter();
-  const pathname = usePathname();
-  const searchParams = useSearchParams();
-
-  const callbackUrl = (() => {
-    const qs = searchParams?.toString();
-    return qs ? `${pathname}?${qs}` : pathname || "/";
-  })();
 
   const handleAddToCart = async () => {
     setLoading(true);
     try {
-      const res = await addToCart({
+      await addToCart({
         id: product?.id.toString(),
         title: product?.title,
         price: product?.price,
         image: product?.mainImage,
+        mainImage: product?.mainImage,
         amount: quantityCount,
         inStock: product?.inStock,
         rating: product?.rating,
         selectedSize,
         slug: product?.slug,
       });
-      if (res.status == 401) {
-        toast.error("Please log in to proceed");
-        // 2) after 1s, redirect to login with a callback back to current page
-        setTimeout(() => {
-          router.push(`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`);
-        }, 1000);
-        return;
-      }
-      if (!res.ok) {
-        throw new Error();
-      }
       calculateTotals();
       toast.success("Product added to the cart");
     } catch (error) {

@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { CustomButton, SectionTitle } from "@/components";
 import { useSession, signIn } from "next-auth/react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 
@@ -35,13 +35,15 @@ const RegisterPage = () => {
   });
 
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const callbackUrl = searchParams.get("callbackUrl") || "/";
   const { data: session, status: sessionStatus } = useSession();
 
   useEffect(() => {
     if (sessionStatus === "authenticated") {
-      router.replace("/");
+      router.replace(callbackUrl);
     }
-  }, [sessionStatus, router]);
+  }, [sessionStatus, router, callbackUrl]);
 
   useEffect(() => {
     const allFieldsFilled = Boolean(
@@ -154,7 +156,11 @@ const RegisterPage = () => {
           email,
           password,
         });
-        result.ok ? router.push("/") : router.push("/login");
+        result.ok
+          ? router.push(callbackUrl)
+          : router.push(
+              `/login${callbackUrl !== "/" ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`,
+            );
       } else {
         const errorData = await res.json();
         throw new Error(errorData.message);

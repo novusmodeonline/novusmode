@@ -211,27 +211,55 @@ model PaymentAttempt {
 
 /**
  * -------------------- CART --------------------
+ * Ownership invariant (enforced in service layer):
+ *   Active carts have EXACTLY ONE of userId or guestTokenHash.
+ *   Never both. Never neither (for active carts).
  */
 
 model Cart {
-  id        String     @id @default(uuid())
-  userId    String     @unique
-  updatedAt DateTime   @updatedAt
-  user      User       @relation(fields: [userId], references: [id])
-  items     CartItem[]
+  id             String   @id @default(uuid())
+  userId         String?  @unique
+  guestTokenHash String?  @unique
+  status         String   @default("active") // active | merged | abandoned
+  version        Int      @default(1)
+  lastActivityAt DateTime @default(now())
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  user  User?      @relation(fields: [userId], references: [id])
+  items CartItem[]
 }
 
 model CartItem {
-  id           String @id @default(uuid())
-  cartId       String
-  productId    String
-  quantity     Int
-  selectedSize String @default("")
+  id                String @id @default(uuid())
+  cartId            String
+  productId         String
+  quantity          Int
+  selectedSize      String @default("")
+  unitPriceSnapshot Float?
 
   product Product @relation(fields: [productId], references: [id])
-  cart    Cart    @relation(fields: [cartId], references: [id])
+  cart    Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
 
   @@unique([cartId, productId, selectedSize])
+}
+
+/**
+ * -------------------- MERGE LEDGER --------------------
+ * Ensures merge idempotency. Key = userId + guestTokenHash + guestCartVersion.
+ */
+
+model MergeLedger {
+  id               String   @id @default(cuid())
+  userId           String
+  guestTokenHash   String
+  guestCartVersion Int
+  resultCartId     String
+  resultVersion    Int
+  warnings         Json?    // Array of { code, productId, selectedSize }
+  createdAt        DateTime @default(now())
+
+  @@unique([userId, guestTokenHash, guestCartVersion])
 }
 
 /**

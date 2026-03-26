@@ -43,14 +43,14 @@ export async function POST(req) {
     ) {
       return NextResponse.json(
         { error: "Missing required fields" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
     /* ------------------ FETCH CART FROM DB (SOURCE OF TRUTH) ------------------ */
 
-    const cart = await prisma.cart.findUnique({
-      where: { userId },
+    const cart = await prisma.cart.findFirst({
+      where: { userId, status: "active" },
       include: {
         items: {
           include: { product: true },
@@ -94,8 +94,6 @@ export async function POST(req) {
         }
       }
     }
-
-
 
     /* ------------------ SHIPPING CALCULATION ------------------ */
 
@@ -221,7 +219,7 @@ export async function POST(req) {
     return NextResponse.json(
       { error: "Failed to save order" },
       { status: 500 },
-      { orderId: finalOrderId }
+      { orderId: finalOrderId },
     );
   }
 }

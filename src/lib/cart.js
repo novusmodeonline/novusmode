@@ -1,14 +1,15 @@
-import { PrismaClient } from "@prisma/client";
-const prisma = new PrismaClient();
+import prisma from "@/lib/prisma";
+import { computeCartTotals } from "@/lib/cartOwnership";
 
 /**
- * Get cart + authoritative totals for a user
+ * Get cart + authoritative totals for a user (by userId).
+ * Backward-compatible — used by coupon and order endpoints.
  */
 export async function getCartWithTotals(userId) {
   if (!userId) throw new Error("User not authenticated");
 
-  const cart = await prisma.cart.findUnique({
-    where: { userId },
+  const cart = await prisma.cart.findFirst({
+    where: { userId, status: "active" },
     include: {
       items: {
         include: { product: true },
@@ -24,13 +25,7 @@ export async function getCartWithTotals(userId) {
     };
   }
 
-  let total = 0;
-  let allQuantity = 0;
-
-  for (const item of cart.items) {
-    total += Math.round(item.product.price * item.quantity);
-    allQuantity += item.quantity;
-  }
+  const { total, allQuantity } = computeCartTotals(cart);
 
   return {
     ...cart,
