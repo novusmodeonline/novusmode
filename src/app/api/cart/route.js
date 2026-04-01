@@ -44,7 +44,13 @@ export async function GET() {
     const { total, allQuantity } = computeCartTotals(cart);
 
     return NextResponse.json({
-      ...cart,
+      id: cart.id,
+      status: cart.status,
+      version: cart.version,
+      lastActivityAt: cart.lastActivityAt,
+      createdAt: cart.createdAt,
+      updatedAt: cart.updatedAt,
+      items: cart.items,
       total,
       allQuantity,
       ownerType: owner.type,
