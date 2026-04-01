@@ -220,7 +220,9 @@ export async function POST() {
         }
       }
 
-      // Mark guest cart as merged
+      // Mark guest cart as merged and clear guestTokenHash so the
+      // @unique constraint does not block the same guest token from
+      // creating a new active cart in a future session.
       await tx.cart.update({
         where: { id: guestCart.id },
         data: { status: "merged", guestTokenHash: null },
