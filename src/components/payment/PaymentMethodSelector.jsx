@@ -4,8 +4,7 @@ import React from "react";
 
 export default function PaymentMethodSelector({ method, onChange, order }) {
   const METHOD_LABELS = {
-    // card: "Credit/Debit Cards",
-    // netbanking: "Netbanking",
+    sabpaisa: "Online Payment (SabPaisa)",
     cod: "Cash on Delivery",
   };
 

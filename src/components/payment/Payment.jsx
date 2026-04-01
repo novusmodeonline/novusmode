@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useProductStore } from "@/app/_zustand/store";
 import {
+  SabPaisaButton,
   PaymentMethodSelector,
   SavedCards,
   CardPaymentForm,
@@ -34,9 +35,11 @@ export default function Payment({
 }) {
   const PAY_AMOUNT = orderTotal;
   const { contact, address } = orderData;
-  const { fullName, email, phone } = contact;
+  const payerName = contact?.fullName || contact?.name || "";
+  const payerEmail = contact?.email || "";
+  const payerMobile = contact?.phone || "";
   const { address1, address2, city, state, pincode } = address;
-  const [method, setMethod] = useState("cod");
+  const [method, setMethod] = useState("sabpaisa");
   const [codLoading, setCodLoading] = useState(false);
   const router = useRouter();
   const { clearCart } = useProductStore();
@@ -110,6 +113,8 @@ export default function Payment({
 
   const getButtonLabel = () => {
     switch (method) {
+      case "sabpaisa":
+        return "Continue to SabPaisa";
       case "card":
         return `Pay ₹${PAY_AMOUNT}`;
       case "netbanking":
@@ -125,6 +130,16 @@ export default function Payment({
   const handlePay = async (e) => {
     e.preventDefault();
     setErrors({});
+
+    if (!orderId) {
+      toast.error("Order not ready yet. Please try again.");
+      return;
+    }
+
+    if (method === "sabpaisa") {
+      onPay && onPay({ method: "sabpaisa", orderId });
+      return;
+    }
 
     if (method === "card") {
       if (!(selectedSavedToken && !showNewCard)) {
@@ -192,12 +207,39 @@ export default function Payment({
       {/* PAYMENT METHOD SELECTOR */}
       <PaymentMethodSelector
         method={method}
-        order={["cod"]}
-        onChange={(m) => setMethod(m)}
+        order={["sabpaisa", "cod"]}
+        onChange={(m) => {
+          setMethod(m);
+        }}
       />
 
       {/* DYNAMIC FORMS */}
       <div className="space-y-4">
+        {/* SABPAISA */}
+        {method === "sabpaisa" && (
+          <div className="bg-white border rounded-xl p-4 space-y-3">
+            <p className="text-sm text-gray-700">
+              Pay securely using SabPaisa non-seamless checkout.
+            </p>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>Name: {payerName || "-"}</div>
+              <div>Email: {payerEmail || "-"}</div>
+              <div>Phone: {payerMobile || "-"}</div>
+              <div className="font-medium text-[var(--color-bg)]">
+                Amount: ₹{PAY_AMOUNT}
+              </div>
+            </div>
+            <SabPaisaButton
+              payerName={payerName}
+              payerEmail={payerEmail}
+              payerMobile={payerMobile}
+              amount={PAY_AMOUNT}
+              clientTxnId={orderId}
+              orderId={orderId}
+            />
+          </div>
+        )}
+
         {/* CARD */}
         {method === "card" && (
           <>
@@ -263,7 +305,7 @@ export default function Payment({
 
           <button
             onClick={handlePay}
-            disabled={isPayDisabled() || codLoading}
+            disabled={method === "sabpaisa" || isPayDisabled() || codLoading}
             className="bg-[var(--color-bg)] text-white px-5 py-3 rounded-lg disabled:opacity-60"
           >
             {codLoading ? "Placing Order..." : getButtonLabel()}
