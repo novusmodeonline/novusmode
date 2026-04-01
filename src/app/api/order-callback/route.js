@@ -28,6 +28,15 @@ export async function POST(request) {
     const formData = await request.formData();
     const encResponseValue = formData.get("encResponse");
 
+    console.log(
+      "[SabPaisa][Callback] formData entries:",
+      Object.fromEntries(formData.entries()),
+    );
+    console.log(
+      "[SabPaisa][Callback] raw encResponse:",
+      encResponseValue || null,
+    );
+
     if (!encResponseValue || typeof encResponseValue !== "string") {
       return NextResponse.json(
         { error: "Malformed request: encResponse missing" },
@@ -38,6 +47,10 @@ export async function POST(request) {
     const parsed = decryptSabPaisaResponse(encResponseValue);
     const statusCode = String(parsed.statusCode || "");
     clientTxnId = String(parsed.clientTxnId || "");
+
+    console.log("[SabPaisa][Callback] decrypted payload:", parsed);
+    console.log("[SabPaisa][Callback] statusCode:", statusCode);
+    console.log("[SabPaisa][Callback] clientTxnId:", clientTxnId);
 
     if (!statusCode || !clientTxnId) {
       return NextResponse.json(
@@ -95,6 +108,13 @@ export async function POST(request) {
           paymentMethod: "SABPAISA",
           paymentId: payment.id,
         },
+      });
+
+      console.log("[SabPaisa][Callback] order updated:", {
+        orderId: order.id,
+        paymentId: payment.id,
+        paymentStatus,
+        orderStatus,
       });
     }
 
