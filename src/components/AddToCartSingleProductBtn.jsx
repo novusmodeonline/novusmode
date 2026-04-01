@@ -31,6 +31,18 @@ const AddToCartSingleProductBtn = ({
       });
       calculateTotals();
       toast.success("Product added to the cart");
+
+      // Dispatch event so CartElement can refetch and open MiniCart
+      window.dispatchEvent(
+        new CustomEvent("itemAddedToCart", {
+          detail: {
+            productId: product?.id,
+            title: product?.title,
+            quantity: quantityCount,
+            size: selectedSize,
+          },
+        }),
+      );
     } catch (error) {
       toast.error("Error adding product to the cart");
     } finally {
