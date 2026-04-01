@@ -190,7 +190,7 @@ export default function SabPaisaButton({
     payerName,
     payerEmail,
     payerMobile,
-    amount: amountString,
+    amount: "1",
     clientTxnId: generatedTxnId,
     callbackUrl,
     channelId: "npm",

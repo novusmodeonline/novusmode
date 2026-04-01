@@ -170,8 +170,13 @@ export default function CheckoutAccordion() {
    */
   const effectiveSubtotal = appliedCoupon ? couponFinalAmount : total;
 
-  const shippingAmount =
-    effectiveSubtotal >= 500 ? 0 : shippingCharges(state, effectiveSubtotal);
+  let shippingAmount = 0;
+  if (effectiveSubtotal < 500) {
+    const calculatedShipping = shippingCharges(state, effectiveSubtotal);
+    if (Number.isFinite(calculatedShipping) && calculatedShipping > 0) {
+      shippingAmount = calculatedShipping;
+    }
+  }
 
   const payableAmount = effectiveSubtotal + shippingAmount;
 

@@ -8,7 +8,13 @@ const OrderSummary = ({ total, products, mode, makePurchase, state }) => {
 
   // 🔑 Decide payable subtotal
   const effectiveSubtotal = appliedCoupon ? finalAmount : total;
-  const shipping = shippingCharges(state, effectiveSubtotal);
+  let shipping = 0;
+  if (effectiveSubtotal > 0 && typeof state === "string" && state.trim()) {
+    const calculatedShipping = shippingCharges(state, effectiveSubtotal);
+    if (Number.isFinite(calculatedShipping) && calculatedShipping > 0) {
+      shipping = calculatedShipping;
+    }
+  }
   const orderTotal =
     effectiveSubtotal === 0 ? 0 : Math.round(effectiveSubtotal + shipping);
 
