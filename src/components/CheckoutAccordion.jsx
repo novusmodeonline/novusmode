@@ -1,7 +1,8 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { useRouter } from "next/navigation";
+import Link from "next/link";
+import { useRouter, usePathname, useSearchParams } from "next/navigation";
 import {
   Loader,
   OrderSummary,
@@ -19,11 +20,19 @@ import { useCouponStore } from "@/app/_zustand/useCouponStore"; // ✅ NEW
 export default function CheckoutAccordion() {
   const [open, setOpen] = useState("contact");
   const { products, total, isHydrating, hasHydrated } = useProductStore();
-  const { data: session } = useSession();
+  const { data: session, status: sessionStatus } = useSession();
   const router = useRouter();
+  const pathname = usePathname();
+  const searchParams = useSearchParams();
 
   const [orderId, setOrderId] = useState(null);
   const [state, setState] = useState("");
+  const callbackUrl = (() => {
+    const qs = searchParams?.toString();
+    return qs ? `${pathname}?${qs}` : pathname || "/checkout";
+  })();
+  const isLoggedIn = sessionStatus === "authenticated";
+
   const [addressId, setAddressId] = useState(null);
 
   // ✅ Coupon UI state (preview only)
@@ -121,12 +130,20 @@ export default function CheckoutAccordion() {
   });
 
   const toggle = (section) => {
+    if (section !== "contact" && !isLoggedIn) {
+      toast.error("Please log in to continue checkout");
+      return;
+    }
     if (section === "address" && !completed.contact) return;
     if (section === "payment" && !completed.address) return;
     setOpen((prev) => (prev === section ? "" : section));
   };
 
   const handleContactNext = (data) => {
+    if (!isLoggedIn) {
+      toast.error("Please log in to continue checkout");
+      return;
+    }
     setCompleted((prev) => ({ ...prev, contact: true }));
     setSavedData((prev) => ({ ...prev, contact: data }));
     setOpen("address");
@@ -173,7 +190,23 @@ export default function CheckoutAccordion() {
                 summary={savedData.contact}
                 onClick={() => toggle("contact")}
               >
-                <ContactDetails onNext={handleContactNext} />
+                {!isLoggedIn ? (
+                  <div className="space-y-4 rounded-xl border border-amber-200 bg-amber-50 p-5 text-[var(--color-bg)]">
+                    <p className="text-sm leading-6">
+                      Please log in to continue from checkout. Your cart stays
+                      available as a guest, but order placement starts only
+                      after authentication.
+                    </p>
+                    <Link
+                      href={`/login?callbackUrl=${encodeURIComponent(callbackUrl)}`}
+                      className="inline-flex items-center justify-center rounded-lg bg-[var(--color-bg)] px-5 py-3 text-sm font-semibold text-white"
+                    >
+                      Log In To Continue
+                    </Link>
+                  </div>
+                ) : (
+                  <ContactDetails onNext={handleContactNext} />
+                )}
               </AccordionItem>
 
               {/* ADDRESS */}
@@ -202,7 +235,7 @@ export default function CheckoutAccordion() {
                 <Payment
                   onPay={handlePaymentDone}
                   orderData={{ ...savedData, orderId }}
-                  orderTotal={payableAmount} // ✅ FIXED
+                  orderTotal={payableAmount}
                   orderId={orderId}
                 />
               </AccordionItem>

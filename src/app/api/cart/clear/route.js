@@ -1,37 +1,41 @@
 import { NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/scripts/authOptions"; // adjust path if needed
-import { PrismaClient } from "@prisma/client";
+import prisma from "@/lib/prisma";
+import {
+  resolveCartOwner,
+  findActiveCart,
+  bumpVersion,
+} from "@/lib/cartOwnership";
 
-const prisma = new PrismaClient();
-
-export async function POST(req) {
+export async function POST() {
   try {
-    const session = await getServerSession(authOptions);
+    const owner = await resolveCartOwner({ createIfMissing: false });
 
-    if (!session?.user?.email) {
+    if (!owner) {
       return NextResponse.json(
-        { error: "User not authenticated" },
-        { status: 401 }
+        {
+          success: true,
+          message: "No cart found",
+          ownerType: "guest",
+          cartVersion: 0,
+          warnings: [],
+        },
+        { status: 200 },
       );
     }
 
-    // Get user ID from DB
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-    });
-
-    if (!user) {
-      return NextResponse.json({ error: "User not found" }, { status: 404 });
-    }
-
-    // Get user's cart
-    const cart = await prisma.cart.findFirst({
-      where: { userId: user.id },
-    });
+    const cart = await findActiveCart(owner);
 
     if (!cart) {
-      return NextResponse.json({ message: "No cart found" }, { status: 200 });
+      return NextResponse.json(
+        {
+          success: true,
+          message: "No cart found",
+          ownerType: owner.type,
+          cartVersion: 0,
+          warnings: [],
+        },
+        { status: 200 },
+      );
     }
 
     // Delete all items from the cart
@@ -39,12 +43,20 @@ export async function POST(req) {
       where: { cartId: cart.id },
     });
 
-    return NextResponse.json({ message: "Cart cleared successfully" });
+    const updated = await bumpVersion(cart.id);
+
+    return NextResponse.json({
+      success: true,
+      message: "Cart cleared successfully",
+      ownerType: owner.type,
+      cartVersion: updated.version,
+      warnings: [],
+    });
   } catch (error) {
     console.error("Error clearing cart:", error);
     return NextResponse.json(
-      { error: "Something went wrong" },
-      { status: 500 }
+      { code: "INTERNAL_ERROR", message: "Something went wrong" },
+      { status: 500 },
     );
   }
 }

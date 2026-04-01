@@ -2,8 +2,8 @@
 
 import { QuantityInputCart, OrderSummary, CouponBox } from "@/components";
 import Image from "next/image";
-import React, { useEffect } from "react";
-import { signIn, useSession } from "next-auth/react";
+import React from "react";
+import { useSession } from "next-auth/react";
 import { FaCheck, FaXmark } from "react-icons/fa6";
 import { useProductStore } from "@/app/_zustand/store";
 import { useCouponStore } from "@/app/_zustand/useCouponStore";
@@ -12,17 +12,9 @@ import toast from "react-hot-toast";
 import { ShoppingBag } from "lucide-react";
 
 const CartClient = () => {
-  const {
-    products,
-    removeFromCart,
-    calculateTotals,
-    total,
-    syncCartWithServer,
-  } = useProductStore();
+  const { products, removeFromCart, calculateTotals, total } =
+    useProductStore();
   const { data: session } = useSession();
-  useEffect(() => {
-    syncCartWithServer();
-  }, []);
 
   const clearCoupon = useCouponStore((s) => s.clearCouponState);
 
@@ -220,7 +212,13 @@ const CartClient = () => {
           {/* Coupon + Order Summary */}
           {products.length !== 0 && (
             <div className="lg:col-span-5 space-y-4">
-              <CouponBox />
+              {session ? (
+                <CouponBox />
+              ) : (
+                <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-[var(--color-bg)]">
+                  Log in at checkout to apply coupons and place your order.
+                </div>
+              )}
               <OrderSummary total={total} products={products} />
             </div>
           )}

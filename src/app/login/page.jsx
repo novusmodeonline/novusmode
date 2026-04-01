@@ -4,6 +4,7 @@ import { signIn, useSession } from "next-auth/react";
 import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState } from "react";
 import toast from "react-hot-toast";
+import Link from "next/link";
 
 const LoginPage = () => {
   const router = useRouter();
@@ -134,6 +135,16 @@ const LoginPage = () => {
           {error && (
             <p className="text-center text-sm mt-2 text-red-600">{error}</p>
           )}
+
+          <p className="text-center text-sm text-gray-600 mt-4">
+            Don&apos;t have an account?{" "}
+            <Link
+              href={`/register${callbackUrl && callbackUrl !== "/" ? `?callbackUrl=${encodeURIComponent(callbackUrl)}` : ""}`}
+              className="font-medium text-[var(--color-bg)] hover:underline"
+            >
+              Register
+            </Link>
+          </p>
         </form>
       </div>
     </div>
