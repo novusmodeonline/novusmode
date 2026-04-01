@@ -21,20 +21,56 @@ function mapOrderStatus(statusCode) {
     : { paymentStatus: "failed", orderStatus: "failed" };
 }
 
-export async function POST(request) {
+async function extractCallbackPayload(request) {
+  const queryEntries = Object.fromEntries(
+    request.nextUrl.searchParams.entries(),
+  );
+  const contentType = request.headers.get("content-type") || "";
+
+  if (
+    request.method === "POST" &&
+    (contentType.includes("application/x-www-form-urlencoded") ||
+      contentType.includes("multipart/form-data"))
+  ) {
+    const formData = await request.formData();
+    const formEntries = Object.fromEntries(formData.entries());
+
+    return {
+      source: "form",
+      payload: {
+        ...queryEntries,
+        ...formEntries,
+      },
+    };
+  }
+
+  return {
+    source: "query",
+    payload: queryEntries,
+  };
+}
+
+async function handleCallback(request) {
   let clientTxnId = "";
 
   try {
-    const formData = await request.formData();
-    const encResponseValue = formData.get("encResponse");
+    const { source, payload } = await extractCallbackPayload(request);
+    const encResponseValue =
+      payload.encResponse ||
+      payload.encresponse ||
+      payload.encData ||
+      payload.encdata ||
+      payload.response;
 
-    console.log(
-      "[SabPaisa][Callback] formData entries:",
-      Object.fromEntries(formData.entries()),
-    );
+    console.log("[SabPaisa][Callback] request source:", source);
+    console.log("[SabPaisa][Callback] incoming payload:", payload);
     console.log(
       "[SabPaisa][Callback] raw encResponse:",
       encResponseValue || null,
+    );
+    console.log(
+      "[SabPaisa][Callback] raw encResponse length:",
+      typeof encResponseValue === "string" ? encResponseValue.length : null,
     );
 
     if (!encResponseValue || typeof encResponseValue !== "string") {
@@ -66,60 +102,132 @@ export async function POST(request) {
       where: { id: clientTxnId },
     });
 
-    if (order) {
-      const amount =
-        parsed.amount && !Number.isNaN(Number(parsed.amount))
-          ? Math.round(Number(parsed.amount))
-          : (order.finalAmount ?? order.amount);
-
-      const payment = await prisma.payment.upsert({
-        where: { orderId: order.id },
-        update: {
-          method: "SABPAISA",
-          status: paymentStatus,
-          amount,
-          gatewayId: parsed.sabpaisaTxnId || null,
-          responseCode: statusCode,
-          responseMessage: parsed.message || null,
-          rawResponse: parsed,
-          webhookVerified: true,
-          webhookReceivedAt: new Date(),
-          processedAt: new Date(),
-        },
-        create: {
-          orderId: order.id,
-          method: "SABPAISA",
-          status: paymentStatus,
-          amount,
-          gatewayId: parsed.sabpaisaTxnId || null,
-          responseCode: statusCode,
-          responseMessage: parsed.message || null,
-          rawResponse: parsed,
-          webhookVerified: true,
-          webhookReceivedAt: new Date(),
-          processedAt: new Date(),
-        },
-      });
-
-      await prisma.order.update({
-        where: { id: order.id },
+    if (!order) {
+      await prisma.paymentAttempt.create({
         data: {
-          status: orderStatus,
-          paymentMethod: "SABPAISA",
-          paymentId: payment.id,
+          direction: "inbound",
+          endpoint: "sabpaisa-callback",
+          statusCode: 404,
+          request: payload,
+          response: {
+            parsed,
+            statusCode,
+            clientTxnId,
+          },
+          note: "callback received but order not found",
         },
       });
 
-      console.log("[SabPaisa][Callback] order updated:", {
-        orderId: order.id,
-        paymentId: payment.id,
-        paymentStatus,
-        orderStatus,
-      });
+      return NextResponse.json(
+        { error: "Order not found for callback" },
+        { status: 404 },
+      );
     }
 
+    const existingPayment = await prisma.payment.findUnique({
+      where: { orderId: order.id },
+    });
+
+    if (existingPayment?.webhookVerified) {
+      await prisma.paymentAttempt.create({
+        data: {
+          paymentId: existingPayment.id,
+          direction: "inbound",
+          endpoint: "sabpaisa-callback",
+          statusCode: 200,
+          request: payload,
+          response: parsed,
+          note: "duplicate callback ignored",
+        },
+      });
+
+      if (isBrowserRedirect(request)) {
+        if (existingPayment.status === "success") {
+          redirect(
+            `/order-confirmation?orderId=${encodeURIComponent(clientTxnId)}&clearCart=1`,
+          );
+        }
+
+        redirect(
+          `/payment/status?id=${encodeURIComponent(clientTxnId)}&status=failed`,
+        );
+      }
+
+      return NextResponse.json({ ok: true, duplicate: true }, { status: 200 });
+    }
+
+    const amount =
+      parsed.amount && !Number.isNaN(Number(parsed.amount))
+        ? Math.round(Number(parsed.amount))
+        : (order.finalAmount ?? order.amount);
+
+    const payment = await prisma.payment.upsert({
+      where: { orderId: order.id },
+      update: {
+        method: "SABPAISA",
+        status: paymentStatus,
+        amount,
+        gatewayId: parsed.sabpaisaTxnId || null,
+        responseCode: statusCode,
+        responseMessage: parsed.message || null,
+        rawResponse: parsed,
+        webhookVerified: true,
+        webhookReceivedAt: new Date(),
+        processedAt: new Date(),
+      },
+      create: {
+        orderId: order.id,
+        method: "SABPAISA",
+        status: paymentStatus,
+        amount,
+        gatewayId: parsed.sabpaisaTxnId || null,
+        responseCode: statusCode,
+        responseMessage: parsed.message || null,
+        rawResponse: parsed,
+        webhookVerified: true,
+        webhookReceivedAt: new Date(),
+        processedAt: new Date(),
+      },
+    });
+
+    await prisma.paymentAttempt.create({
+      data: {
+        paymentId: payment.id,
+        direction: "inbound",
+        endpoint: "sabpaisa-callback",
+        statusCode: 200,
+        request: payload,
+        response: parsed,
+        note: "callback processed",
+      },
+    });
+
+    await prisma.order.update({
+      where: { id: order.id },
+      data: {
+        status: orderStatus,
+        paymentMethod: "SABPAISA",
+        paymentId: payment.id,
+      },
+    });
+
+    console.log("[SabPaisa][Callback] order updated:", {
+      orderId: order.id,
+      paymentId: payment.id,
+      paymentStatus,
+      orderStatus,
+    });
+
     if (isBrowserRedirect(request)) {
-      redirect(`/payment/status?id=${encodeURIComponent(clientTxnId)}`);
+      if (statusCode === "0000") {
+        redirect(
+          `/order-confirmation?orderId=${encodeURIComponent(clientTxnId)}&clearCart=1`,
+        );
+      }
+
+      redirect(
+        `/payment/status?id=${encodeURIComponent(clientTxnId)}&status=failed`,
+      );
     }
 
     return NextResponse.json({ ok: true }, { status: 200 });
@@ -136,4 +244,12 @@ export async function POST(request) {
       { status: 500 },
     );
   }
+}
+
+export async function GET(request) {
+  return handleCallback(request);
+}
+
+export async function POST(request) {
+  return handleCallback(request);
 }
