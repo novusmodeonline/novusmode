@@ -64,7 +64,6 @@ export async function getOrCreateGuestToken() {
  */
 export function guestCookieOptions() {
   return {
-    name: GUEST_COOKIE_NAME,
     httpOnly: true,
     sameSite: "lax",
     secure: process.env.NODE_ENV === "production",
@@ -169,6 +168,51 @@ export async function getOrCreateCartByOwner(owner) {
   const existing = await findActiveCart(owner);
   if (existing) return existing;
 
+  if (owner.type === "guest") {
+    // Prefer reviving an abandoned guest cart to preserve user intent.
+    const abandoned = await prisma.cart.findFirst({
+      where: {
+        guestTokenHash: owner.guestTokenHash,
+        status: "abandoned",
+      },
+      orderBy: { updatedAt: "desc" },
+      include: {
+        items: { include: { product: true } },
+      },
+    });
+
+    if (abandoned) {
+      return prisma.cart.update({
+        where: { id: abandoned.id },
+        data: {
+          status: "active",
+          version: { increment: 1 },
+          lastActivityAt: new Date(),
+        },
+        include: {
+          items: { include: { product: true } },
+        },
+      });
+    }
+
+    // Legacy safety: release token from any non-active cart that still holds it.
+    const legacyNonActive = await prisma.cart.findFirst({
+      where: {
+        guestTokenHash: owner.guestTokenHash,
+        NOT: { status: "active" },
+      },
+      orderBy: { updatedAt: "desc" },
+      select: { id: true },
+    });
+
+    if (legacyNonActive) {
+      await prisma.cart.update({
+        where: { id: legacyNonActive.id },
+        data: { guestTokenHash: null },
+      });
+    }
+  }
+
   const data =
     owner.type === "user"
       ? { userId: owner.userId, status: "active" }
@@ -230,7 +274,8 @@ export function computeCartTotals(cart) {
   let total = 0;
   let allQuantity = 0;
   for (const item of cart.items) {
-    total += Math.round(item.product.price * item.quantity);
+    const unitPrice = item.unitPriceSnapshot ?? item.product.price;
+    total += Math.round(unitPrice * item.quantity);
     allQuantity += item.quantity;
   }
   return { total, allQuantity };

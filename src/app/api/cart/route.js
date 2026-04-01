@@ -9,6 +9,8 @@ import {
   setGuestCookie,
 } from "@/lib/cartOwnership";
 
+const MAX_ITEM_QTY = 10;
+
 // ---------------------------------------------------------------------------
 // GET: fetch full cart for current owner (user OR guest)
 // ---------------------------------------------------------------------------
@@ -104,6 +106,37 @@ export async function POST(req) {
       );
     }
 
+    const stockOnHand = Math.max(0, Number(product.stockOnHand || 0));
+    const inStock = Math.max(0, Number(product.inStock || 0));
+    // Backward compatibility: many existing rows still use inStock while
+    // stockOnHand remains 0 until backfilled.
+    const availableQty = stockOnHand > 0 ? stockOnHand : inStock;
+
+    if (availableQty <= 0) {
+      return NextResponse.json(
+        {
+          code: "OUT_OF_STOCK",
+          message: "Product is currently out of stock",
+          availableQty: 0,
+        },
+        { status: 409 },
+      );
+    }
+
+    const maxAllowedQty = Math.min(availableQty, MAX_ITEM_QTY);
+    const appliedQty = Math.min(quantity, maxAllowedQty);
+    const warnings = [];
+
+    if (appliedQty < quantity) {
+      warnings.push({
+        code: "QTY_CAPPED",
+        productId,
+        selectedSize,
+        requestedQty: quantity,
+        appliedQty,
+      });
+    }
+
     // Upsert item
     await prisma.cartItem.upsert({
       where: {
@@ -113,11 +146,11 @@ export async function POST(req) {
           selectedSize,
         },
       },
-      update: { quantity, unitPriceSnapshot: product.price },
+      update: { quantity: appliedQty, unitPriceSnapshot: product.price },
       create: {
         cartId: cart.id,
         productId,
-        quantity,
+        quantity: appliedQty,
         selectedSize,
         unitPriceSnapshot: product.price,
       },
@@ -130,7 +163,7 @@ export async function POST(req) {
       success: true,
       ownerType: owner.type,
       cartVersion: updated.version,
-      warnings: [],
+      warnings,
     });
 
     // Set guest cookie if new token was generated

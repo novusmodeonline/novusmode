@@ -27,20 +27,23 @@ export const useProductStore = create()((set, get) => ({
 
   // ─── Add to cart (server-backed for both guest + user) ────────────
   addToCart: async (newProduct) => {
+    const matchesProduct = (item) =>
+      String(item.id) === String(newProduct.id) &&
+      (item.selectedSize || "") === (newProduct.selectedSize || "");
+
+    const previousItem = get().products.find(matchesProduct);
+    const hadPreviousItem = Boolean(previousItem);
+    const previousAmount = previousItem?.amount ?? 0;
+
     // Optimistic local update
     set((state) => {
-      const exists = state.products.find(
-        (item) =>
-          String(item.id) === String(newProduct.id) &&
-          (item.selectedSize || "") === (newProduct.selectedSize || ""),
-      );
+      const exists = state.products.find(matchesProduct);
       let updatedProducts;
       if (!exists) {
         updatedProducts = [...state.products, newProduct];
       } else {
         updatedProducts = state.products.map((product) =>
-          String(product.id) === String(newProduct.id) &&
-          (product.selectedSize || "") === (newProduct.selectedSize || "")
+          matchesProduct(product)
             ? { ...product, amount: product.amount + newProduct.amount }
             : product,
         );
@@ -76,16 +79,19 @@ export const useProductStore = create()((set, get) => ({
     } catch (error) {
       console.error("addToCart API error:", error);
       // Revert optimistic update on failure
-      set((state) => ({
-        products: state.products.filter(
-          (p) =>
-            !(
-              String(p.id) === String(newProduct.id) &&
-              (p.selectedSize || "") === (newProduct.selectedSize || "") &&
-              p.amount === newProduct.amount
-            ),
-        ),
-      }));
+      set((state) => {
+        if (!hadPreviousItem) {
+          return {
+            products: state.products.filter((p) => !matchesProduct(p)),
+          };
+        }
+
+        return {
+          products: state.products.map((p) =>
+            matchesProduct(p) ? { ...p, amount: previousAmount } : p,
+          ),
+        };
+      });
       get().calculateTotals();
       throw error;
     }

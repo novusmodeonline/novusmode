@@ -223,7 +223,7 @@ export async function POST() {
       // Mark guest cart as merged
       await tx.cart.update({
         where: { id: guestCart.id },
-        data: { status: "merged" },
+        data: { status: "merged", guestTokenHash: null },
       });
 
       // Bump user cart version

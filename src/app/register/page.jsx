@@ -7,6 +7,18 @@ import { useRouter, useSearchParams } from "next/navigation";
 import React, { useEffect, useState, useRef } from "react";
 import toast from "react-hot-toast";
 
+const sanitizeCallbackUrl = (value) => {
+  if (typeof value !== "string" || !value.startsWith("/")) {
+    return "/";
+  }
+
+  if (value.startsWith("//") || value.includes("://")) {
+    return "/";
+  }
+
+  return value;
+};
+
 const RegisterPage = () => {
   const dateInputRef = useRef(null);
   const [error, setError] = useState("");
@@ -36,7 +48,9 @@ const RegisterPage = () => {
 
   const router = useRouter();
   const searchParams = useSearchParams();
-  const callbackUrl = searchParams.get("callbackUrl") || "/";
+  const callbackUrl = sanitizeCallbackUrl(
+    searchParams.get("callbackUrl") || "/",
+  );
   const { data: session, status: sessionStatus } = useSession();
 
   useEffect(() => {

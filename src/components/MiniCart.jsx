@@ -7,18 +7,9 @@ import { ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import CartItem from "@/components/CartItem";
 
-const MiniCart = ({
-  isOpen,
-  onClose,
-  cartData,
-  onCountChange,
-  onCartDataChange,
-  fetchCart,
-}) => {
+const MiniCart = ({ isOpen, onClose, cartData, onCountChange, fetchCart }) => {
   const router = useRouter();
   const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState(null);
   const cartRef = useRef(null);
 
   // ── Sync passed cartData to local state ──────────────────────────────────
