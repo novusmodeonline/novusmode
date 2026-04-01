@@ -6,7 +6,6 @@ export default function PaymentMethodSelector({ method, onChange, order }) {
   const METHOD_LABELS = {
     // card: "Credit/Debit Cards",
     // netbanking: "Netbanking",
-    upi: "UPI",
     cod: "Cash on Delivery",
   };
 

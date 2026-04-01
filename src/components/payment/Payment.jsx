@@ -8,10 +8,8 @@ import {
   PaymentMethodSelector,
   SavedCards,
   CardPaymentForm,
-  UpiPaymentForm,
   NetbankingPaymentForm,
   CodPayment,
-  UpiPaymentHandler,
 } from "@/components";
 
 const PAY_AMOUNT = 999;
@@ -34,7 +32,6 @@ export default function Payment({
   orderTotal,
   orderId,
 }) {
-  // ORDER FIX: Card → Netbanking → UPI → COD
   const PAY_AMOUNT = orderTotal;
   const { contact, address } = orderData;
   const { fullName, email, phone } = contact;
@@ -55,7 +52,6 @@ export default function Payment({
   });
 
   const [saveCard, setSaveCard] = useState(false);
-  const [upiId, setUpiId] = useState("");
   const [bank, setBank] = useState("");
   const [errors, setErrors] = useState({});
 
@@ -85,14 +81,6 @@ export default function Payment({
     return Object.keys(errs).length === 0;
   };
 
-  const validateUpi = () => {
-    let errs = {};
-    if (!upiId || !upiId.includes("@"))
-      errs.upi = "Enter valid UPI ID (example: user@upi)";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
   const validateBank = () => {
     let errs = {};
     if (!bank) errs.bank = "Select a bank";
@@ -116,7 +104,6 @@ export default function Payment({
     }
 
     if (method === "netbanking") return !bank;
-    if (method === "upi") return !(upiId.includes("@") && upiId.length > 3);
 
     return false;
   };
@@ -127,8 +114,6 @@ export default function Payment({
         return `Pay ₹${PAY_AMOUNT}`;
       case "netbanking":
         return "Proceed to Bank";
-      case "upi":
-        return "Pay via UPI";
       case "cod":
         return "Place COD Order";
       default:
@@ -146,7 +131,6 @@ export default function Payment({
         if (!validateCard()) return;
       }
     }
-    if (method === "upi" && !validateUpi()) return;
     if (method === "netbanking" && !validateBank()) return;
 
     // ---------- COD: call backend, create payment record, redirect ----------
@@ -168,12 +152,14 @@ export default function Payment({
           throw new Error(data.error || "Failed to place COD order");
         }
         // Success: clear cart and redirect
-        
+
         onPay && onPay({ method: "cod", orderId });
         window.location.href = `/order-confirmation?orderId=${orderId}&clearCart=1`;
       } catch (err) {
         console.error("COD ORDER ERROR:", err);
-        toast.error(err.message || "Failed to place COD order. Please try again.");
+        toast.error(
+          err.message || "Failed to place COD order. Please try again.",
+        );
       } finally {
         setCodLoading(false);
       }
@@ -196,7 +182,6 @@ export default function Payment({
       }
     }
 
-    if (method === "upi") payload.upi = { upiId };
     if (method === "netbanking") payload.netbanking = { bank };
 
     onPay && onPay(payload);
@@ -207,7 +192,6 @@ export default function Payment({
       {/* PAYMENT METHOD SELECTOR */}
       <PaymentMethodSelector
         method={method}
-        // order={["card", "netbanking", "upi", "cod"]}
         order={["cod"]}
         onChange={(m) => setMethod(m)}
       />
@@ -262,21 +246,6 @@ export default function Payment({
             banks={BANKS}
             error={errors.bank}
             onChange={(v) => setBank(v)}
-          />
-        )}
-
-        {/* UPI */}
-        {method === "upi" && (
-          <UpiPaymentHandler
-            order={{
-              orderId, // will be replaced with real order id
-              amount: PAY_AMOUNT * 100, // convert to paise
-              contact: {
-                email,
-                phone,
-              },
-              address: {}, // if needed
-            }}
           />
         )}
 

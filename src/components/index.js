@@ -78,10 +78,6 @@ export { default as CodPayment } from "./payment/CodPayment";
 export { default as NetbankingPaymentForm } from "./payment/NetbankingPaymentForm";
 export { default as PaymentMethodSelector } from "./payment/PaymentMethodSelector";
 export { default as SavedCards } from "./payment/SavedCards";
-export { default as UpiPaymentForm } from "./payment/UpiPaymentForm";
-export { default as UPIIntentFlow } from "./payment/upi/UPIIntentFlow";
-export { default as UPIQRCodeFlow } from "./payment/upi/UPIQRCodeFlow";
-export { default as UpiPaymentHandler } from "../app/checkout/UpiPaymentHandler";
 export { default as CouponBox } from "../components/CouponBox";
 
 // Misc Components
