@@ -58,6 +58,12 @@ export { default as HeaderServer } from "./Header/HeaderServer";
 export { default as HeaderTop } from "./Header/HeaderTop-old";
 export { default as SearchInput } from "./Header/SearchInput";
 export { default as CartElement } from "./Header/CartElement";
+
+// Mini cart
+export { default as MiniCart } from "./MiniCart";
+export { default as CartItem } from "./CartItem";
+export { default as CartIcon } from "./CartIcon";
+export { default as MiniCartItem } from "./MiniCartItem";
 export { default as HeartElement } from "./HeartElement";
 export { default as WishlistItem } from "./WishlistItem";
 export { default as Footer } from "./Footer";
