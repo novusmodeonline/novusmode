@@ -39,7 +39,7 @@ async function main() {
       guestTokenHash: { not: null },
       lastActivityAt: { lt: daysAgo(STALE_DAYS) },
     },
-    data: { status: "abandoned" },
+    data: { status: "abandoned", guestTokenHash: null },
   });
   console.log(`  Marked ${staleResult.count} stale guest carts as abandoned`);
 
