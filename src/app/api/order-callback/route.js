@@ -21,6 +21,41 @@ function mapOrderStatus(statusCode) {
     : { paymentStatus: "failed", orderStatus: "failed" };
 }
 
+function isNextRedirectError(error) {
+  const digest = String(error?.digest || "");
+  return digest.startsWith("NEXT_REDIRECT;");
+}
+
+function normalizeStatusCode(value) {
+  return String(value || "").trim();
+}
+
+function isCallbackSuccess(parsed, statusCode) {
+  const normalizedCode = normalizeStatusCode(statusCode);
+  const gatewayStatus = String(parsed?.status || parsed?.sabpaisaStatus || "")
+    .trim()
+    .toUpperCase();
+
+  return (
+    normalizedCode === "0000" ||
+    gatewayStatus === "SUCCESS" ||
+    gatewayStatus === "CAPTURED"
+  );
+}
+
+function isPaymentRecordSuccess(payment) {
+  const paymentStatus = String(payment?.status || "")
+    .trim()
+    .toLowerCase();
+  const responseCode = normalizeStatusCode(payment?.responseCode);
+
+  return (
+    paymentStatus === "success" ||
+    paymentStatus === "paid" ||
+    responseCode === "0000"
+  );
+}
+
 async function extractCallbackPayload(request) {
   const queryEntries = Object.fromEntries(
     request.nextUrl.searchParams.entries(),
@@ -81,7 +116,7 @@ async function handleCallback(request) {
     }
 
     const parsed = decryptSabPaisaResponse(encResponseValue);
-    const statusCode = String(parsed.statusCode || "");
+    const statusCode = normalizeStatusCode(parsed.statusCode);
     clientTxnId = String(parsed.clientTxnId || "");
 
     console.log("[SabPaisa][Callback] decrypted payload:", parsed);
@@ -97,7 +132,10 @@ async function handleCallback(request) {
       );
     }
 
-    const { paymentStatus, orderStatus } = mapOrderStatus(statusCode);
+    const callbackSuccess = isCallbackSuccess(parsed, statusCode);
+    const { paymentStatus, orderStatus } = mapOrderStatus(
+      callbackSuccess ? "0000" : "failed",
+    );
     const order = await prisma.order.findUnique({
       where: { id: clientTxnId },
     });
@@ -109,14 +147,15 @@ async function handleCallback(request) {
           endpoint: "sabpaisa-callback",
           statusCode: 404,
           request: payload,
-          response: {
-            parsed,
-            statusCode,
-            clientTxnId,
-          },
+          response: { parsed, statusCode, clientTxnId },
           note: "callback received but order not found",
         },
       });
+
+      if (isBrowserRedirect(request)) {
+        const safeId = encodeURIComponent(clientTxnId || "unknown");
+        redirect(`/payment/status?id=${safeId}&status=error`);
+      }
 
       return NextResponse.json(
         { error: "Order not found for callback" },
@@ -142,7 +181,7 @@ async function handleCallback(request) {
       });
 
       if (isBrowserRedirect(request)) {
-        if (existingPayment.status === "success") {
+        if (isPaymentRecordSuccess(existingPayment)) {
           redirect(
             `/order-confirmation?orderId=${encodeURIComponent(clientTxnId)}&clearCart=1`,
           );
@@ -219,7 +258,7 @@ async function handleCallback(request) {
     });
 
     if (isBrowserRedirect(request)) {
-      if (statusCode === "0000") {
+      if (callbackSuccess) {
         redirect(
           `/order-confirmation?orderId=${encodeURIComponent(clientTxnId)}&clearCart=1`,
         );
@@ -232,6 +271,12 @@ async function handleCallback(request) {
 
     return NextResponse.json({ ok: true }, { status: 200 });
   } catch (error) {
+    // In Next.js, redirect() throws a special error to stop execution.
+    // Re-throw it so successful browser redirects are not treated as failures.
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
     console.error("SabPaisa callback error", error);
 
     if (isBrowserRedirect(request)) {
