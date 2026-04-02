@@ -1,9 +1,5 @@
-"use client";
-import React from "react";
-import { Checkout, CheckoutAccordion } from "@/components";
+import { CheckoutAccordion } from "@/components";
 
-const CheckoutPage = () => {
-  return (<CheckoutAccordion />)
+export default function CheckoutPage() {
+  return <CheckoutAccordion />;
 }
-
-export default CheckoutPage;

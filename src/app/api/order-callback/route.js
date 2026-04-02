@@ -1,239 +1,300 @@
-// app/api/pay10/callback/route.js
 import { NextResponse } from "next/server";
+import { redirect } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { sha256, safeCompare, buildHashString } from "@/lib/pay10/crypto";
+import { decryptSabPaisaResponse } from "@/lib/sabpaisa-crypto";
 
-// Mask helper
-function mask(obj = {}) {
-  const o = { ...obj };
+function isBrowserRedirect(request) {
+  const secFetchMode = request.headers.get("sec-fetch-mode") || "";
+  const accept = request.headers.get("accept") || "";
+  const userAgent = request.headers.get("user-agent") || "";
 
-  if (o.PAYER_ADDRESS)
-    o.PAYER_ADDRESS = ("" + o.PAYER_ADDRESS).replace(/^(.).+(@.+)$/, "$1***$2");
-
-  if (o.CUST_PHONE)
-    o.CUST_PHONE = ("" + o.CUST_PHONE).replace(/(.{3}).+(.{3})/, "$1****$2");
-
-  if (o.HASH) o.HASH = "<redacted>";
-
-  return o;
+  return (
+    secFetchMode.toLowerCase() === "navigate" ||
+    accept.includes("text/html") ||
+    userAgent.includes("Mozilla")
+  );
 }
 
-const detectPaymentMethod = {
-  QR: "UPI",
-  UP: "UPI",
-  CC: "Credit Card",
-};
-
-async function forwardToPartner(payload, prismaPaymentId) {
-  const url = process.env.FORWARD_CALLBACK_URL;
-  const secret = process.env.FORWARD_CALLBACK_SECRET;
-
-  if (!url || !secret) {
-    console.warn("⚠️ Forwarding disabled: env missing");
-    return;
-  }
-
-  let lastError = null;
-
-  for (let attempt = 1; attempt <= 3; attempt++) {
-    try {
-      const res = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-forward-secret": secret,
-        },
-        body: JSON.stringify(payload),
-      });
-
-      const text = await res.text();
-      // ✅ Log every forward attempt
-      await prisma.paymentAttempt.create({
-        data: {
-          paymentId: prismaPaymentId,
-          direction: "outbound",
-          endpoint: "partner-callback",
-          request: mask(payload),
-          response: text,
-          statusCode: res.status,
-          note: res.ok ? "forwarded successfully" : "partner rejected",
-        },
-      });
-
-      if (res.ok) return;
-      lastError = `HTTP ${res.status}`;
-    } catch (err) {
-      lastError = err.message;
-    }
-  }
-
-  // ✅ Permanent failure log
-  await prisma.paymentAttempt.create({
-    data: {
-      paymentId: prismaPaymentId,
-      direction: "outbound",
-      endpoint: "partner-callback",
-      request: mask(payload),
-      response: { error: lastError },
-      statusCode: 500,
-      note: "forwarding failed after retries",
-    },
-  });
+function mapOrderStatus(statusCode) {
+  return statusCode === "0000"
+    ? { paymentStatus: "success", orderStatus: "paid" }
+    : { paymentStatus: "failed", orderStatus: "failed" };
 }
 
-export async function POST(req) {
+function isNextRedirectError(error) {
+  const digest = String(error?.digest || "");
+  return digest.startsWith("NEXT_REDIRECT;");
+}
+
+function normalizeStatusCode(value) {
+  return String(value || "").trim();
+}
+
+function isCallbackSuccess(parsed, statusCode) {
+  const normalizedCode = normalizeStatusCode(statusCode);
+  const gatewayStatus = String(parsed?.status || parsed?.sabpaisaStatus || "")
+    .trim()
+    .toUpperCase();
+
+  return (
+    normalizedCode === "0000" ||
+    gatewayStatus === "SUCCESS" ||
+    gatewayStatus === "CAPTURED"
+  );
+}
+
+function isPaymentRecordSuccess(payment) {
+  const paymentStatus = String(payment?.status || "")
+    .trim()
+    .toLowerCase();
+  const responseCode = normalizeStatusCode(payment?.responseCode);
+
+  return (
+    paymentStatus === "success" ||
+    paymentStatus === "paid" ||
+    responseCode === "0000"
+  );
+}
+
+async function extractCallbackPayload(request) {
+  const queryEntries = Object.fromEntries(
+    request.nextUrl.searchParams.entries(),
+  );
+  const contentType = request.headers.get("content-type") || "";
+
+  if (
+    request.method === "POST" &&
+    (contentType.includes("application/x-www-form-urlencoded") ||
+      contentType.includes("multipart/form-data"))
+  ) {
+    const formData = await request.formData();
+    const formEntries = Object.fromEntries(formData.entries());
+
+    return {
+      source: "form",
+      payload: {
+        ...queryEntries,
+        ...formEntries,
+      },
+    };
+  }
+
+  return {
+    source: "query",
+    payload: queryEntries,
+  };
+}
+
+async function handleCallback(request) {
+  let clientTxnId = "";
+
   try {
-    const body = await req.json();
-    // console.log("📩 RAW CALLBACK RECEIVED:", body);
+    const { source, payload } = await extractCallbackPayload(request);
+    const encResponseValue =
+      payload.encResponse ||
+      payload.encresponse ||
+      payload.encData ||
+      payload.encdata ||
+      payload.response;
 
-    const SECRET = process.env.PAY10_SALT;
+    console.log("[SabPaisa][Callback] request source:", source);
+    console.log("[SabPaisa][Callback] incoming payload:", payload);
+    console.log(
+      "[SabPaisa][Callback] raw encResponse:",
+      encResponseValue || null,
+    );
+    console.log(
+      "[SabPaisa][Callback] raw encResponse length:",
+      typeof encResponseValue === "string" ? encResponseValue.length : null,
+    );
 
-    if (!SECRET)
+    if (!encResponseValue || typeof encResponseValue !== "string") {
       return NextResponse.json(
-        { error: "server_misconfigured" },
-        { status: 500 }
+        { error: "Malformed request: encResponse missing" },
+        { status: 400 },
       );
-
-    // Must include HASH from callback
-    const respHash = body.HASH;
-    if (!respHash)
-      return NextResponse.json({ error: "NO_HASH" }, { status: 400 });
-
-    // Prepare hashInput: sort keys alphabetically except HASH
-    const hashParams = { ...body };
-    delete hashParams.HASH;
-
-    const sorted = buildHashString(hashParams);
-
-    const hashInputWithSecret = sorted + SECRET;
-    const recomputedHash = sha256(hashInputWithSecret);
-
-    // console.log("🔐 PAY10 HASH:", respHash);
-    // console.log("🔄 RECOMPUTED:", recomputedHash);
-
-    if (!safeCompare(recomputedHash, respHash)) {
-      console.error("❌ HASH MISMATCH", {
-        received: respHash,
-        expected: recomputedHash,
-      });
-      return NextResponse.json({ error: "HASH_MISMATCH" }, { status: 400 });
     }
 
-    const orderId = body.ORDER_ID;
-    if (!orderId)
-      return NextResponse.json({ error: "NO_ORDER_ID" }, { status: 400 });
+    const parsed = decryptSabPaisaResponse(encResponseValue);
+    const statusCode = normalizeStatusCode(parsed.statusCode);
+    clientTxnId = String(parsed.clientTxnId || "");
 
-    let order = await prisma.order.findUnique({
-      where: { id: orderId },
+    console.log("[SabPaisa][Callback] decrypted payload:", parsed);
+    console.log("[SabPaisa][Callback] statusCode:", statusCode);
+    console.log("[SabPaisa][Callback] clientTxnId:", clientTxnId);
+
+    if (!statusCode || !clientTxnId) {
+      return NextResponse.json(
+        {
+          error: "Malformed decrypted payload: missing statusCode/clientTxnId",
+        },
+        { status: 400 },
+      );
+    }
+
+    const callbackSuccess = isCallbackSuccess(parsed, statusCode);
+    const { paymentStatus, orderStatus } = mapOrderStatus(
+      callbackSuccess ? "0000" : "failed",
+    );
+    const order = await prisma.order.findUnique({
+      where: { id: clientTxnId },
     });
 
     if (!order) {
-      order = await prisma.order.create({
-        data: {
-          id: orderId,
-          userId: process.env.EXTERNAL_USER_ID,
-          addressId: process.env.EXTERNAL_ADDRESS_ID,
-          amount: Number(body.AMOUNT || 0),
-          email: body.CUST_EMAIL || "external@unknown.com",
-          phone: body.CUST_PHONE || "0000000000",
-          status: "pending",
-          source: "external",
-          externalRefId: body.ORDER_ID, // or partner order id if different
-          paymentMethod: detectPaymentMethod[body.PAYMENT_TYPE] || "MISC",
-        },
-      });
-    }
-
-    // load or create payment entry
-    let payment = await prisma.payment.findUnique({ where: { orderId } });
-    console.log(
-      "detect = ",
-      body.PAYMENT_TYPE,
-      detectPaymentMethod[body.PAYMENT_TYPE]
-    );
-    if (!payment) {
-      payment = await prisma.payment.create({
-        data: {
-          orderId,
-          method: detectPaymentMethod[body.PAYMENT_TYPE] || "MISC",
-          status: "pending",
-          amount: Number(body.AMOUNT || 0),
-          gatewayId: body.TXN_ID || null,
-          rawResponse: mask(body),
-          webhookVerified: false,
-          pgRefNum: body.PG_REF_NUM,
-          rrn: body.RRN,
-        },
-      });
-    }
-
-    // Idempotency check
-    if (payment.webhookVerified) {
       await prisma.paymentAttempt.create({
         data: {
-          paymentId: payment.id,
           direction: "inbound",
-          endpoint: "callback",
-          request: mask(body),
-          response: mask(body),
+          endpoint: "sabpaisa-callback",
+          statusCode: 404,
+          request: payload,
+          response: { parsed, statusCode, clientTxnId },
+          note: "callback received but order not found",
+        },
+      });
+
+      if (isBrowserRedirect(request)) {
+        const safeId = encodeURIComponent(clientTxnId || "unknown");
+        redirect(`/payment/status?id=${safeId}&status=error`);
+      }
+
+      return NextResponse.json(
+        { error: "Order not found for callback" },
+        { status: 404 },
+      );
+    }
+
+    const existingPayment = await prisma.payment.findUnique({
+      where: { orderId: order.id },
+    });
+
+    if (existingPayment?.webhookVerified) {
+      await prisma.paymentAttempt.create({
+        data: {
+          paymentId: existingPayment.id,
+          direction: "inbound",
+          endpoint: "sabpaisa-callback",
           statusCode: 200,
+          request: payload,
+          response: parsed,
           note: "duplicate callback ignored",
         },
       });
-      return NextResponse.json({ ok: true });
+
+      if (isBrowserRedirect(request)) {
+        if (isPaymentRecordSuccess(existingPayment)) {
+          redirect(
+            `/order-confirmation?orderId=${encodeURIComponent(clientTxnId)}&clearCart=1`,
+          );
+        }
+
+        redirect(
+          `/payment/status?id=${encodeURIComponent(clientTxnId)}&status=failed`,
+        );
+      }
+
+      return NextResponse.json({ ok: true, duplicate: true }, { status: 200 });
     }
 
-    // Determine final status
-    const finalStatus =
-      body.RESPONSE_CODE === "000" &&
-      (body.STATUS === "Captured" || body.STATUS === "Success")
-        ? "success"
-        : body.RESPONSE_CODE === "000" && body.STATUS === "Sent to Bank"
-        ? "pending"
-        : "failed";
-    const updated = await prisma.payment.update({
-      where: { orderId },
-      data: {
-        status: finalStatus,
-        gatewayId: body.TXN_ID || null,
-        responseCode: body.RESPONSE_CODE,
-        responseMessage: body.PG_TXN_MESSAGE || body.RESPONSE_MESSAGE || null,
-        payerAddress: body.CARD_MASK || null,
-        rawResponse: mask(body),
+    const amount =
+      parsed.amount && !Number.isNaN(Number(parsed.amount))
+        ? Math.round(Number(parsed.amount))
+        : (order.finalAmount ?? order.amount);
+
+    const payment = await prisma.payment.upsert({
+      where: { orderId: order.id },
+      update: {
+        method: "SABPAISA",
+        status: paymentStatus,
+        amount,
+        gatewayId: parsed.sabpaisaTxnId || null,
+        responseCode: statusCode,
+        responseMessage: parsed.message || null,
+        rawResponse: parsed,
         webhookVerified: true,
         webhookReceivedAt: new Date(),
+        processedAt: new Date(),
+      },
+      create: {
+        orderId: order.id,
+        method: "SABPAISA",
+        status: paymentStatus,
+        amount,
+        gatewayId: parsed.sabpaisaTxnId || null,
+        responseCode: statusCode,
+        responseMessage: parsed.message || null,
+        rawResponse: parsed,
+        webhookVerified: true,
+        webhookReceivedAt: new Date(),
+        processedAt: new Date(),
       },
     });
 
-    // ✅ Forward verified callback to partner
-    forwardToPartner(body, updated.id);
-
-    // Log attempt
     await prisma.paymentAttempt.create({
       data: {
-        paymentId: updated.id,
+        paymentId: payment.id,
         direction: "inbound",
-        endpoint: "callback",
-        request: mask(body),
-        response: mask(body),
+        endpoint: "sabpaisa-callback",
         statusCode: 200,
+        request: payload,
+        response: parsed,
         note: "callback processed",
       },
     });
 
-    // update main order status
     await prisma.order.update({
-      where: { id: orderId },
+      where: { id: order.id },
       data: {
-        status: finalStatus === "success" ? "paid" : finalStatus,
-        paymentId: updated.id,
-        paymentMethod: detectPaymentMethod[body.PAYMENT_TYPE] || "MISC",
+        status: orderStatus,
+        paymentMethod: "SABPAISA",
+        paymentId: payment.id,
       },
     });
 
-    return NextResponse.json({ ok: true });
-  } catch (err) {
-    console.error("❌ CALLBACK ERROR", err);
-    return NextResponse.json({ error: "internal" }, { status: 500 });
+    console.log("[SabPaisa][Callback] order updated:", {
+      orderId: order.id,
+      paymentId: payment.id,
+      paymentStatus,
+      orderStatus,
+    });
+
+    if (isBrowserRedirect(request)) {
+      if (callbackSuccess) {
+        redirect(
+          `/order-confirmation?orderId=${encodeURIComponent(clientTxnId)}&clearCart=1`,
+        );
+      }
+
+      redirect(
+        `/payment/status?id=${encodeURIComponent(clientTxnId)}&status=failed`,
+      );
+    }
+
+    return NextResponse.json({ ok: true }, { status: 200 });
+  } catch (error) {
+    // In Next.js, redirect() throws a special error to stop execution.
+    // Re-throw it so successful browser redirects are not treated as failures.
+    if (isNextRedirectError(error)) {
+      throw error;
+    }
+
+    console.error("SabPaisa callback error", error);
+
+    if (isBrowserRedirect(request)) {
+      const safeId = encodeURIComponent(clientTxnId || "unknown");
+      redirect(`/payment/status?id=${safeId}&status=error`);
+    }
+
+    return NextResponse.json(
+      { error: "Unable to process SabPaisa callback" },
+      { status: 500 },
+    );
   }
+}
+
+export async function GET(request) {
+  return handleCallback(request);
+}
+
+export async function POST(request) {
+  return handleCallback(request);
 }

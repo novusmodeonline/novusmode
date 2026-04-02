@@ -5,13 +5,12 @@ import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useProductStore } from "@/app/_zustand/store";
 import {
+  SabPaisaButton,
   PaymentMethodSelector,
   SavedCards,
   CardPaymentForm,
-  UpiPaymentForm,
   NetbankingPaymentForm,
   CodPayment,
-  UpiPaymentHandler,
 } from "@/components";
 
 const PAY_AMOUNT = 999;
@@ -34,12 +33,13 @@ export default function Payment({
   orderTotal,
   orderId,
 }) {
-  // ORDER FIX: Card → Netbanking → UPI → COD
   const PAY_AMOUNT = orderTotal;
   const { contact, address } = orderData;
-  const { fullName, email, phone } = contact;
+  const payerName = contact?.fullName || contact?.name || "";
+  const payerEmail = contact?.email || "";
+  const payerMobile = contact?.phone || "";
   const { address1, address2, city, state, pincode } = address;
-  const [method, setMethod] = useState("cod");
+  const [method, setMethod] = useState("sabpaisa");
   const [codLoading, setCodLoading] = useState(false);
   const router = useRouter();
   const { clearCart } = useProductStore();
@@ -55,7 +55,6 @@ export default function Payment({
   });
 
   const [saveCard, setSaveCard] = useState(false);
-  const [upiId, setUpiId] = useState("");
   const [bank, setBank] = useState("");
   const [errors, setErrors] = useState({});
 
@@ -85,14 +84,6 @@ export default function Payment({
     return Object.keys(errs).length === 0;
   };
 
-  const validateUpi = () => {
-    let errs = {};
-    if (!upiId || !upiId.includes("@"))
-      errs.upi = "Enter valid UPI ID (example: user@upi)";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
   const validateBank = () => {
     let errs = {};
     if (!bank) errs.bank = "Select a bank";
@@ -116,19 +107,18 @@ export default function Payment({
     }
 
     if (method === "netbanking") return !bank;
-    if (method === "upi") return !(upiId.includes("@") && upiId.length > 3);
 
     return false;
   };
 
   const getButtonLabel = () => {
     switch (method) {
+      case "sabpaisa":
+        return "Continue to SabPaisa";
       case "card":
         return `Pay ₹${PAY_AMOUNT}`;
       case "netbanking":
         return "Proceed to Bank";
-      case "upi":
-        return "Pay via UPI";
       case "cod":
         return "Place COD Order";
       default:
@@ -141,12 +131,21 @@ export default function Payment({
     e.preventDefault();
     setErrors({});
 
+    if (!orderId) {
+      toast.error("Order not ready yet. Please try again.");
+      return;
+    }
+
+    if (method === "sabpaisa") {
+      onPay && onPay({ method: "sabpaisa", orderId });
+      return;
+    }
+
     if (method === "card") {
       if (!(selectedSavedToken && !showNewCard)) {
         if (!validateCard()) return;
       }
     }
-    if (method === "upi" && !validateUpi()) return;
     if (method === "netbanking" && !validateBank()) return;
 
     // ---------- COD: call backend, create payment record, redirect ----------
@@ -168,12 +167,14 @@ export default function Payment({
           throw new Error(data.error || "Failed to place COD order");
         }
         // Success: clear cart and redirect
-        
+
         onPay && onPay({ method: "cod", orderId });
         window.location.href = `/order-confirmation?orderId=${orderId}&clearCart=1`;
       } catch (err) {
         console.error("COD ORDER ERROR:", err);
-        toast.error(err.message || "Failed to place COD order. Please try again.");
+        toast.error(
+          err.message || "Failed to place COD order. Please try again.",
+        );
       } finally {
         setCodLoading(false);
       }
@@ -196,7 +197,6 @@ export default function Payment({
       }
     }
 
-    if (method === "upi") payload.upi = { upiId };
     if (method === "netbanking") payload.netbanking = { bank };
 
     onPay && onPay(payload);
@@ -207,13 +207,39 @@ export default function Payment({
       {/* PAYMENT METHOD SELECTOR */}
       <PaymentMethodSelector
         method={method}
-        // order={["card", "netbanking", "upi", "cod"]}
-        order={["cod"]}
-        onChange={(m) => setMethod(m)}
+        order={["sabpaisa", "cod"]}
+        onChange={(m) => {
+          setMethod(m);
+        }}
       />
 
       {/* DYNAMIC FORMS */}
       <div className="space-y-4">
+        {/* SABPAISA */}
+        {method === "sabpaisa" && (
+          <div className="bg-white border rounded-xl p-4 space-y-3">
+            <p className="text-sm text-gray-700">
+              Pay securely using SabPaisa non-seamless checkout.
+            </p>
+            <div className="text-sm text-gray-600 space-y-1">
+              <div>Name: {payerName || "-"}</div>
+              <div>Email: {payerEmail || "-"}</div>
+              <div>Phone: {payerMobile || "-"}</div>
+              <div className="font-medium text-[var(--color-bg)]">
+                Amount: ₹{PAY_AMOUNT}
+              </div>
+            </div>
+            <SabPaisaButton
+              payerName={payerName}
+              payerEmail={payerEmail}
+              payerMobile={payerMobile}
+              amount={PAY_AMOUNT}
+              clientTxnId={orderId}
+              orderId={orderId}
+            />
+          </div>
+        )}
+
         {/* CARD */}
         {method === "card" && (
           <>
@@ -265,21 +291,6 @@ export default function Payment({
           />
         )}
 
-        {/* UPI */}
-        {method === "upi" && (
-          <UpiPaymentHandler
-            order={{
-              orderId, // will be replaced with real order id
-              amount: PAY_AMOUNT * 100, // convert to paise
-              contact: {
-                email,
-                phone,
-              },
-              address: {}, // if needed
-            }}
-          />
-        )}
-
         {/* COD */}
         {method === "cod" && <CodPayment />}
       </div>
@@ -294,7 +305,7 @@ export default function Payment({
 
           <button
             onClick={handlePay}
-            disabled={isPayDisabled() || codLoading}
+            disabled={method === "sabpaisa" || isPayDisabled() || codLoading}
             className="bg-[var(--color-bg)] text-white px-5 py-3 rounded-lg disabled:opacity-60"
           >
             {codLoading ? "Placing Order..." : getButtonLabel()}

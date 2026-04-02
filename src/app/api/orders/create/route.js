@@ -98,8 +98,15 @@ export async function POST(req) {
 
     /* ------------------ SHIPPING CALCULATION ------------------ */
 
-    const shippingAmount =
-      finalAmount >= 500 ? 0 : shippingCharges(address.state, finalAmount);
+    let shippingAmount = 0;
+    try {
+      const calculatedShipping = shippingCharges(address?.state, finalAmount);
+      if (Number.isFinite(calculatedShipping) && calculatedShipping > 0) {
+        shippingAmount = calculatedShipping;
+      }
+    } catch {
+      shippingAmount = 0;
+    }
 
     const payableAmount = finalAmount + shippingAmount;
 
