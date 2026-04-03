@@ -171,6 +171,7 @@ model Payment {
   id                String    @id @default(cuid())
   orderId           String    @unique
   method            String
+  mode              String?
   status            String    @default("initiated")
   amount            Int
   gatewayId         String?
@@ -187,6 +188,10 @@ model Payment {
   webhookReceivedAt DateTime?
   processedAt       DateTime?
   retryCount        Int       @default(0)
+  reconciliationRequired Boolean @default(false)
+  reconciliationStatus   String?
+  reconciliationAttempts Int     @default(0)
+  lastReconciliationAt   DateTime?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
