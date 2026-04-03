@@ -15,12 +15,6 @@ function isBrowserRedirect(request) {
   );
 }
 
-function mapOrderStatus(statusCode) {
-  return statusCode === "0000"
-    ? { paymentStatus: "success", orderStatus: "paid" }
-    : { paymentStatus: "failed", orderStatus: "failed" };
-}
-
 function isNextRedirectError(error) {
   const digest = String(error?.digest || "");
   return digest.startsWith("NEXT_REDIRECT;");
@@ -30,17 +24,160 @@ function normalizeStatusCode(value) {
   return String(value || "").trim();
 }
 
-function isCallbackSuccess(parsed, statusCode) {
-  const normalizedCode = normalizeStatusCode(statusCode);
+function normalizePaymentMode(paymentMode) {
+  const mode = String(paymentMode || "")
+    .trim()
+    .toUpperCase();
+
+  if (!mode) return null;
+
+  if (mode.includes("UPI") || mode.includes("BHIM") || mode.includes("QR")) {
+    return "UPI";
+  }
+
+  if (
+    mode.includes("CARD") ||
+    mode.includes("CREDIT") ||
+    mode.includes("DEBIT") ||
+    mode.includes("VISA") ||
+    mode.includes("MASTERCARD") ||
+    mode.includes("RUPAY")
+  ) {
+    return "Cards";
+  }
+
+  if (
+    mode.includes("NETBANKING") ||
+    mode.includes("BANKING") ||
+    mode === "NB"
+  ) {
+    return "NetBanking";
+  }
+
+  if (
+    mode.includes("WALLET") ||
+    mode.includes("PAYTM") ||
+    mode.includes("PHONEPE") ||
+    mode.includes("MOBIKWIK") ||
+    mode.includes("AMAZONPAY")
+  ) {
+    return "Wallet";
+  }
+
+  return "Other";
+}
+
+function isTerminalPaymentStatus(status) {
+  const normalized = String(status || "")
+    .trim()
+    .toLowerCase();
+
+  return (
+    normalized === "success" ||
+    normalized === "failed" ||
+    normalized === "aborted"
+  );
+}
+
+function mapSabPaisaCallback(statusCode, parsed) {
+  const code = normalizeStatusCode(statusCode);
   const gatewayStatus = String(parsed?.status || parsed?.sabpaisaStatus || "")
     .trim()
     .toUpperCase();
 
-  return (
-    normalizedCode === "0000" ||
-    gatewayStatus === "SUCCESS" ||
-    gatewayStatus === "CAPTURED"
-  );
+  const byCode = {
+    "0000": {
+      paymentStatus: "success",
+      orderStatus: "paid",
+      redirectStatus: "success",
+      reconciliationRequired: false,
+      terminal: true,
+    },
+    "0300": {
+      paymentStatus: "failed",
+      orderStatus: "failed",
+      redirectStatus: "failed",
+      reconciliationRequired: false,
+      terminal: true,
+    },
+    "0100": {
+      paymentStatus: "initiated",
+      orderStatus: "pending",
+      redirectStatus: "pending",
+      reconciliationRequired: false,
+      terminal: false,
+    },
+    "0200": {
+      paymentStatus: "aborted",
+      orderStatus: "failed",
+      redirectStatus: "failed",
+      reconciliationRequired: false,
+      terminal: true,
+    },
+    "0999": {
+      paymentStatus: "unknown",
+      orderStatus: "pending",
+      redirectStatus: "pending",
+      reconciliationRequired: true,
+      terminal: false,
+    },
+    "0400": {
+      paymentStatus: "challan_generated",
+      orderStatus: "pending",
+      redirectStatus: "pending",
+      reconciliationRequired: false,
+      terminal: false,
+    },
+    404: {
+      paymentStatus: "not_found",
+      orderStatus: "pending",
+      redirectStatus: "pending",
+      reconciliationRequired: true,
+      terminal: false,
+    },
+  };
+
+  if (byCode[code]) {
+    return { ...byCode[code], code };
+  }
+
+  if (gatewayStatus === "SUCCESS" || gatewayStatus === "CAPTURED") {
+    return {
+      paymentStatus: "success",
+      orderStatus: "paid",
+      redirectStatus: "success",
+      reconciliationRequired: false,
+      terminal: true,
+      code,
+    };
+  }
+
+  return {
+    paymentStatus: "unknown",
+    orderStatus: "pending",
+    redirectStatus: "pending",
+    reconciliationRequired: true,
+    terminal: false,
+    code,
+  };
+}
+
+function redirectPathForStatus(clientTxnId, redirectStatus) {
+  const safeId = encodeURIComponent(clientTxnId || "unknown");
+
+  if (redirectStatus === "success") {
+    return `/order-confirmation?orderId=${safeId}&status=success&clearCart=1`;
+  }
+
+  if (redirectStatus === "failed") {
+    return `/order-confirmation?orderId=${safeId}&status=failed`;
+  }
+
+  if (redirectStatus === "pending") {
+    return `/order-confirmation?orderId=${safeId}&status=pending`;
+  }
+
+  return `/order-confirmation?orderId=${safeId}&status=error`;
 }
 
 function isPaymentRecordSuccess(payment) {
@@ -132,10 +269,10 @@ async function handleCallback(request) {
       );
     }
 
-    const callbackSuccess = isCallbackSuccess(parsed, statusCode);
-    const { paymentStatus, orderStatus } = mapOrderStatus(
-      callbackSuccess ? "0000" : "failed",
-    );
+    const callbackResult = mapSabPaisaCallback(statusCode, parsed);
+    const paymentStatus = callbackResult.paymentStatus;
+    const orderStatus = callbackResult.orderStatus;
+    const normalizedMode = normalizePaymentMode(parsed.paymentMode);
     const order = await prisma.order.findUnique({
       where: { id: clientTxnId },
     });
@@ -154,7 +291,7 @@ async function handleCallback(request) {
 
       if (isBrowserRedirect(request)) {
         const safeId = encodeURIComponent(clientTxnId || "unknown");
-        redirect(`/payment/status?id=${safeId}&status=error`);
+        redirect(`/order-confirmation?orderId=${safeId}&status=error`);
       }
 
       return NextResponse.json(
@@ -167,7 +304,10 @@ async function handleCallback(request) {
       where: { orderId: order.id },
     });
 
-    if (existingPayment?.webhookVerified) {
+    if (
+      existingPayment?.webhookVerified &&
+      isTerminalPaymentStatus(existingPayment.status)
+    ) {
       await prisma.paymentAttempt.create({
         data: {
           paymentId: existingPayment.id,
@@ -181,15 +321,10 @@ async function handleCallback(request) {
       });
 
       if (isBrowserRedirect(request)) {
-        if (isPaymentRecordSuccess(existingPayment)) {
-          redirect(
-            `/order-confirmation?orderId=${encodeURIComponent(clientTxnId)}&clearCart=1`,
-          );
-        }
-
-        redirect(
-          `/payment/status?id=${encodeURIComponent(clientTxnId)}&status=failed`,
-        );
+        const duplicateRedirectStatus = isPaymentRecordSuccess(existingPayment)
+          ? "success"
+          : "failed";
+        redirect(redirectPathForStatus(clientTxnId, duplicateRedirectStatus));
       }
 
       return NextResponse.json({ ok: true, duplicate: true }, { status: 200 });
@@ -204,28 +339,52 @@ async function handleCallback(request) {
       where: { orderId: order.id },
       update: {
         method: "SABPAISA",
+        mode: normalizedMode,
         status: paymentStatus,
         amount,
         gatewayId: parsed.sabpaisaTxnId || null,
         responseCode: statusCode,
-        responseMessage: parsed.message || null,
+        responseMessage:
+          parsed.sabpaisaMessage || parsed.status || parsed.message || null,
+        payerName: parsed.payerName || null,
+        rrn: parsed.rrn || null,
         rawResponse: parsed,
         webhookVerified: true,
         webhookReceivedAt: new Date(),
-        processedAt: new Date(),
+        processedAt: callbackResult.terminal ? new Date() : null,
+        reconciliationRequired: callbackResult.reconciliationRequired,
+        reconciliationStatus: callbackResult.reconciliationRequired
+          ? "required"
+          : "not_required",
+        reconciliationAttempts: callbackResult.reconciliationRequired
+          ? existingPayment?.reconciliationAttempts || 0
+          : 0,
+        lastReconciliationAt: callbackResult.reconciliationRequired
+          ? existingPayment?.lastReconciliationAt || null
+          : null,
       },
       create: {
         orderId: order.id,
         method: "SABPAISA",
+        mode: normalizedMode,
         status: paymentStatus,
         amount,
         gatewayId: parsed.sabpaisaTxnId || null,
         responseCode: statusCode,
-        responseMessage: parsed.message || null,
+        responseMessage:
+          parsed.sabpaisaMessage || parsed.status || parsed.message || null,
+        payerName: parsed.payerName || null,
+        rrn: parsed.rrn || null,
         rawResponse: parsed,
         webhookVerified: true,
         webhookReceivedAt: new Date(),
-        processedAt: new Date(),
+        processedAt: callbackResult.terminal ? new Date() : null,
+        reconciliationRequired: callbackResult.reconciliationRequired,
+        reconciliationStatus: callbackResult.reconciliationRequired
+          ? "required"
+          : "not_required",
+        reconciliationAttempts: 0,
+        lastReconciliationAt: null,
       },
     });
 
@@ -237,9 +396,31 @@ async function handleCallback(request) {
         statusCode: 200,
         request: payload,
         response: parsed,
-        note: "callback processed",
+        note: callbackResult.reconciliationRequired
+          ? "callback processed - reconciliation required"
+          : "callback processed",
       },
     });
+
+    if (callbackResult.reconciliationRequired) {
+      await prisma.paymentAttempt.create({
+        data: {
+          paymentId: payment.id,
+          direction: "internal",
+          endpoint: "sabpaisa-enquiry",
+          statusCode: null,
+          request: {
+            clientTxnId,
+            statusCode,
+          },
+          response: {
+            queued: true,
+            reason: "status requires transaction enquiry",
+          },
+          note: "enquiry queued",
+        },
+      });
+    }
 
     await prisma.order.update({
       where: { id: order.id },
@@ -258,14 +439,8 @@ async function handleCallback(request) {
     });
 
     if (isBrowserRedirect(request)) {
-      if (callbackSuccess) {
-        redirect(
-          `/order-confirmation?orderId=${encodeURIComponent(clientTxnId)}&clearCart=1`,
-        );
-      }
-
       redirect(
-        `/payment/status?id=${encodeURIComponent(clientTxnId)}&status=failed`,
+        redirectPathForStatus(clientTxnId, callbackResult.redirectStatus),
       );
     }
 
@@ -281,7 +456,7 @@ async function handleCallback(request) {
 
     if (isBrowserRedirect(request)) {
       const safeId = encodeURIComponent(clientTxnId || "unknown");
-      redirect(`/payment/status?id=${safeId}&status=error`);
+      redirect(`/order-confirmation?orderId=${safeId}&status=error`);
     }
 
     return NextResponse.json(

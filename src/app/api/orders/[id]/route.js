@@ -2,6 +2,7 @@ import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
 export async function GET(req, { params }) {
+  console.log("working?");
   const { id } = await params;
   try {
     const order = await prisma.order.findUnique({

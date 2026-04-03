@@ -394,6 +394,7 @@ export async function POST(request) {
       where: { orderId: order.id },
       update: {
         method: "SABPAISA",
+        mode: null,
         status: "initiated",
         amount: Math.round(Number(payload.amount)),
         rawResponse: {
@@ -404,10 +405,15 @@ export async function POST(request) {
         webhookVerified: false,
         webhookReceivedAt: null,
         processedAt: null,
+        reconciliationRequired: false,
+        reconciliationStatus: "not_required",
+        reconciliationAttempts: 0,
+        lastReconciliationAt: null,
       },
       create: {
         orderId: order.id,
         method: "SABPAISA",
+        mode: null,
         status: "initiated",
         amount: Math.round(Number(payload.amount)),
         rawResponse: {
@@ -415,6 +421,10 @@ export async function POST(request) {
           endpoint,
           payload: maskPayload(payload),
         },
+        reconciliationRequired: false,
+        reconciliationStatus: "not_required",
+        reconciliationAttempts: 0,
+        lastReconciliationAt: null,
       },
     });
 
