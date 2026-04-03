@@ -8,7 +8,7 @@ const SHIPPING_ENABLED = ["1", "true", "yes", "on"].includes(
     .trim()
     .toLowerCase(),
 );
-
+console.log("SHIPPING_ENABLED : ", SHIPPING_ENABLED);
 const OrderSummary = ({ total, products, mode, makePurchase, state }) => {
   const { appliedCoupon, discountAmount, finalAmount } = useCouponStore();
 
