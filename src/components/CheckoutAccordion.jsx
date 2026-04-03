@@ -17,6 +17,12 @@ import { useProductStore } from "@/app/_zustand/store";
 import { shippingCharges } from "@/helper/common";
 import { useCouponStore } from "@/app/_zustand/useCouponStore"; // ✅ NEW
 
+const SHIPPING_ENABLED = ["1", "true", "yes", "on"].includes(
+  String(process.env.NEXT_PUBLIC_SABPAISA_SHIPPING_ENABLED || "")
+    .trim()
+    .toLowerCase(),
+);
+
 export default function CheckoutAccordion() {
   const [open, setOpen] = useState("contact");
   const { products, total, isHydrating, hasHydrated } = useProductStore();
@@ -171,7 +177,7 @@ export default function CheckoutAccordion() {
   const effectiveSubtotal = appliedCoupon ? couponFinalAmount : total;
 
   let shippingAmount = 0;
-  if (effectiveSubtotal < 500) {
+  if (SHIPPING_ENABLED && effectiveSubtotal < 500) {
     const calculatedShipping = shippingCharges(state, effectiveSubtotal);
     if (Number.isFinite(calculatedShipping) && calculatedShipping > 0) {
       shippingAmount = calculatedShipping;

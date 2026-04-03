@@ -3,13 +3,24 @@ import Link from "next/link";
 import { shippingCharges } from "@/helper/common";
 import { useCouponStore } from "@/app/_zustand/useCouponStore";
 
+const SHIPPING_ENABLED = ["1", "true", "yes", "on"].includes(
+  String(process.env.NEXT_PUBLIC_SABPAISA_SHIPPING_ENABLED || "")
+    .trim()
+    .toLowerCase(),
+);
+
 const OrderSummary = ({ total, products, mode, makePurchase, state }) => {
   const { appliedCoupon, discountAmount, finalAmount } = useCouponStore();
 
   // 🔑 Decide payable subtotal
   const effectiveSubtotal = appliedCoupon ? finalAmount : total;
   let shipping = 0;
-  if (effectiveSubtotal > 0 && typeof state === "string" && state.trim()) {
+  if (
+    SHIPPING_ENABLED &&
+    effectiveSubtotal > 0 &&
+    typeof state === "string" &&
+    state.trim()
+  ) {
     const calculatedShipping = shippingCharges(state, effectiveSubtotal);
     if (Number.isFinite(calculatedShipping) && calculatedShipping > 0) {
       shipping = calculatedShipping;

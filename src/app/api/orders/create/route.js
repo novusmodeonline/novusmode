@@ -6,6 +6,14 @@ import { authOptions } from "@/scripts/authOptions";
 import { applyCouponRule } from "@/lib/couponRules";
 import { shippingCharges } from "@/helper/common";
 
+function isEnvFlagEnabled(value) {
+  return ["1", "true", "yes", "on"].includes(
+    String(value || "")
+      .trim()
+      .toLowerCase(),
+  );
+}
+
 function generateOrderId() {
   const timestamp = Date.now(); // ms since epoch
   const random = Math.floor(10000 + Math.random() * 90000); // 5-digit
@@ -98,14 +106,19 @@ export async function POST(req) {
 
     /* ------------------ SHIPPING CALCULATION ------------------ */
 
+    const shippingEnabled = isEnvFlagEnabled(
+      process.env.SABPAISA_SHIPPING_ENABLED,
+    );
     let shippingAmount = 0;
-    try {
-      const calculatedShipping = shippingCharges(address?.state, finalAmount);
-      if (Number.isFinite(calculatedShipping) && calculatedShipping > 0) {
-        shippingAmount = calculatedShipping;
+    if (shippingEnabled) {
+      try {
+        const calculatedShipping = shippingCharges(address?.state, finalAmount);
+        if (Number.isFinite(calculatedShipping) && calculatedShipping > 0) {
+          shippingAmount = calculatedShipping;
+        }
+      } catch {
+        shippingAmount = 0;
       }
-    } catch {
-      shippingAmount = 0;
     }
 
     const payableAmount = finalAmount + shippingAmount;
