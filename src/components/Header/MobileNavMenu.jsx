@@ -16,7 +16,6 @@ export default function MobileNavMenu() {
   const menuRef = useRef(null);
 
   useEffect(() => {
-    console.log("here?")
     if (!menuOpen) return;
     const handleClickOutside = (e) => {
       if (menuRef.current && !menuRef.current.contains(e.target)) {
@@ -55,8 +54,10 @@ export default function MobileNavMenu() {
           aria-modal="true"
           role="dialog"
         >
-          <div className="bg-white w-4/5 max-w-xs h-full shadow-lg p-6 flex flex-col gap-4"
-               style={{ minWidth: 220 }}>
+          <div
+            className="bg-white w-4/5 max-w-xs h-full shadow-lg p-6 flex flex-col gap-4"
+            style={{ minWidth: 220 }}
+          >
             {navLinks.map((link) => (
               <Link
                 key={link.href}
