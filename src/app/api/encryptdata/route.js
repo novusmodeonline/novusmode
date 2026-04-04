@@ -221,7 +221,7 @@ export async function GET(request) {
         ([key, value]) => `${key}=${encodeURIComponent(String(value || ""))}`,
       )
       .join("&");
-
+    console.log("Raw String for Encryption:", rawString);
     const encryptedPayload = await encryptSabPaisa(
       payload.authKey,
       payload.authIV,
