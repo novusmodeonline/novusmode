@@ -1,42 +1,69 @@
-export function pickProductsForInvoice(amount, products) {
+export function pickProductsForInvoice(amount, products, options = {}) {
+  const targetAmount = Math.max(0, Math.round(Number(amount || 0)));
+  const maxDiscount = Math.max(
+    0,
+    Math.round(Number(options.maxDiscount ?? 1000)),
+  );
+
+  const shuffled = [...(products || [])]
+    .map((product) => ({
+      ...product,
+      price: Math.round(Number(product.price || 0)),
+    }))
+    .filter((product) => product.price > 0)
+    .sort(() => 0.5 - Math.random());
+
   let selected = [];
   let sum = 0;
-  const MAX_DISCOUNT = 1000;
-
-  // Shuffle to avoid deterministic picks
-  const shuffled = [...products].sort(() => 0.5 - Math.random());
 
   for (const product of shuffled) {
-    // If already perfect or acceptable, stop
-    if (sum >= amount) break;
+    if (sum >= targetAmount) break;
 
     const nextSum = sum + product.price;
-    const overshoot = nextSum - amount;
+    const overshoot = nextSum - targetAmount;
 
-    // Case 1: Safe add (still under target)
-    if (nextSum <= amount) {
+    if (nextSum <= targetAmount) {
       selected.push({ ...product, qty: 1 });
       sum = nextSum;
       continue;
     }
 
-    // Case 2: Slight overshoot (acceptable → discount)
-    if (overshoot > 0 && overshoot <= MAX_DISCOUNT) {
+    if (overshoot > 0 && overshoot <= maxDiscount) {
       selected.push({ ...product, qty: 1 });
       sum = nextSum;
-      break; // we are done
+      break;
     }
-
-    // Case 3: Overshoot too big → skip product
-    // DO NOTHING, just continue loop
   }
 
-  const discount = sum > amount ? sum - amount : 0;
+  if (sum < targetAmount) {
+    const selectedKeys = new Set(
+      selected.map((product) => product.id || product.slug || product.title),
+    );
+
+    const fallbackProduct = shuffled
+      .filter(
+        (product) =>
+          !selectedKeys.has(product.id || product.slug || product.title),
+      )
+      .map((product) => ({
+        product,
+        overshoot: sum + product.price - targetAmount,
+      }))
+      .filter((entry) => entry.overshoot >= 0 && entry.overshoot <= maxDiscount)
+      .sort((a, b) => a.overshoot - b.overshoot)[0];
+
+    if (fallbackProduct) {
+      selected.push({ ...fallbackProduct.product, qty: 1 });
+      sum += fallbackProduct.product.price;
+    }
+  }
+
+  const discount = sum > targetAmount ? sum - targetAmount : 0;
 
   return {
     products: selected,
     total: sum,
     discount,
-    finalPayable: sum - discount,
+    finalPayable: Math.max(0, sum - discount),
   };
 }
