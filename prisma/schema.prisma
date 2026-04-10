@@ -135,6 +135,7 @@ model Order {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+  IPAddress String?
 
   products OrderItem[]
   coupon   Coupon?     @relation(fields: [couponId], references: [id])
