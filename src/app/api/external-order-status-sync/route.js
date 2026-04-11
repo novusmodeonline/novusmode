@@ -320,6 +320,7 @@ async function forwardToExternalVendor(endpoint, requestBody, orderSource) {
   if (!endpoint) {
     return {
       ok: false,
+      forwardedToVendor: false,
       skipped: true,
       reason: "missing_external_order_webhook_url",
       endpoint: null,
@@ -354,6 +355,7 @@ async function forwardToExternalVendor(endpoint, requestBody, orderSource) {
     }
     return {
       ok: response.ok,
+      forwardedToVendor: response.ok,
       skipped: false,
       reason: null,
       endpoint,
@@ -364,6 +366,7 @@ async function forwardToExternalVendor(endpoint, requestBody, orderSource) {
   } catch (error) {
     return {
       ok: false,
+      forwardedToVendor: false,
       skipped: false,
       reason: error?.message || "Failed to send webhook",
       endpoint,
@@ -473,10 +476,55 @@ export async function POST(request) {
           order?.source,
         );
 
+        if (order?.payment?.id) {
+          await prisma.paymentAttempt.create({
+            data: {
+              paymentId: order.payment.id,
+              direction: "outbound",
+              endpoint: forwarded?.endpoint || "external-order-webhook",
+              statusCode: forwarded?.status || null,
+              request: vendorPayload,
+              response: {
+                forwardedToVendor: forwarded?.forwardedToVendor || false,
+                ok: forwarded?.ok || false,
+                skipped: forwarded?.skipped || false,
+                status: forwarded?.status || null,
+                statusText: forwarded?.statusText || null,
+                body: forwarded?.responseBody || null,
+                reason: forwarded?.reason || null,
+              },
+              note: forwarded?.skipped
+                ? "external-order-forward skipped"
+                : forwarded?.forwardedToVendor
+                  ? "external-order-forward success"
+                  : "external-order-forward failed",
+            },
+          });
+
+          await prisma.payment.update({
+            where: { id: order.payment.id },
+            data: {
+              rawResponse: {
+                ...(order.payment.rawResponse || {}),
+                vendorForward: {
+                  forwardedToVendor: forwarded?.forwardedToVendor || false,
+                  ok: forwarded?.ok || false,
+                  skipped: forwarded?.skipped || false,
+                  endpoint: forwarded?.endpoint || null,
+                  status: forwarded?.status || null,
+                  statusText: forwarded?.statusText || null,
+                  reason: forwarded?.reason || null,
+                },
+              },
+            },
+          });
+        }
+
         results.push({
           orderId,
           ok: true,
           createdOrder,
+          forwardedToVendor: forwarded?.forwardedToVendor || false,
           paymentStatus: callbackResult.paymentStatus,
           orderStatus: callbackResult.orderStatus,
           message: callbackResult.message,
@@ -501,11 +549,13 @@ export async function POST(request) {
           orderId,
           ok: false,
           createdOrder: false,
+          forwardedToVendor: false,
           paymentStatus: "error",
           orderStatus: "error",
           message: error?.message || "Failed to fetch transaction status",
           forwarded: {
             ok: false,
+            forwardedToVendor: false,
             skipped: true,
             reason: "status_fetch_failed",
             endpoint: webhookEndpoint || null,

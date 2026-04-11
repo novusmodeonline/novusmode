@@ -752,6 +752,7 @@ async function handleCallback(request) {
           statusCode: vendorForward?.status || null,
           request: vendorForward?.requestBody || { clientTxnId },
           response: {
+            forwardedToVendor: vendorForward?.ok || false,
             ok: vendorForward?.ok || false,
             skipped: vendorForward?.skipped || false,
             status: vendorForward?.status || null,
@@ -773,6 +774,7 @@ async function handleCallback(request) {
           rawResponse: {
             ...(payment.rawResponse || {}),
             vendorForward: {
+              forwardedToVendor: vendorForward?.ok || false,
               ok: vendorForward?.ok || false,
               skipped: vendorForward?.skipped || false,
               endpoint: vendorForward?.endpoint || null,
