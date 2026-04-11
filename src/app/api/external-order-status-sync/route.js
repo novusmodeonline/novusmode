@@ -352,7 +352,6 @@ async function forwardToExternalVendor(endpoint, requestBody, orderSource) {
         responseBody = responseText;
       }
     }
-    console.log("[forwardToExternalVendor] response:", responseBody);
     return {
       ok: response.ok,
       skipped: false,
@@ -468,10 +467,6 @@ export async function POST(request) {
           rawRequest: body,
           externalOrderNote,
         });
-        console.log(
-          "[external-order-status-sync] forwarding to vendor with payload:",
-          vendorPayload,
-        );
         const forwarded = await forwardToExternalVendor(
           webhookEndpoint,
           vendorPayload,
@@ -521,7 +516,9 @@ export async function POST(request) {
 
     const processedCount = results.length;
     const forwardedCount = results.filter((item) => item.forwarded?.ok).length;
-
+    console.log(
+      `[external-order-status-sync] Processed ${processedCount} orders, forwarded ${forwardedCount} to vendor.`,
+    );
     return NextResponse.json({
       ok: true,
       receivedCount: orderIds.length,
