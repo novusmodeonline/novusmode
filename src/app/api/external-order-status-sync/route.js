@@ -41,16 +41,14 @@ async function createSyncLog({
 }) {
   try {
     // Ensure meta is JSON-serializable by converting to plain object
-    const safeMeta = meta
-      ? JSON.parse(JSON.stringify(meta))
-      : null;
+    const safeMeta = meta ? JSON.parse(JSON.stringify(meta)) : null;
 
-    console.log("[createSyncLog] Creating log entry", {
-      batchId,
-      orderId,
-      stage,
-      status,
-    });
+    // console.log("[createSyncLog] Creating log entry", {
+    //   batchId,
+    //   orderId,
+    //   stage,
+    //   status,
+    // });
 
     const result = await prisma.externalOrderSyncLog.create({
       data: {
@@ -70,11 +68,11 @@ async function createSyncLog({
       },
     });
 
-    console.log("[createSyncLog] ✅ Log created successfully", {
-      orderId,
-      stage,
-      id: result.id,
-    });
+    // console.log("[createSyncLog] ✅ Log created successfully", {
+    //   orderId,
+    //   stage,
+    //   id: result.id,
+    // });
   } catch (logError) {
     console.error("[createSyncLog] ❌ Failed to write sync log", {
       orderId,
@@ -582,7 +580,6 @@ export async function POST(request) {
 
     for (const orderId of orderIds) {
       try {
-
         const enquiry = await checkSabPaisaStatus(orderId);
         const callbackResult = mapSabPaisaStatus(
           enquiry.statusCode,
