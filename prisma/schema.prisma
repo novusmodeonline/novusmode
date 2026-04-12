@@ -215,6 +215,28 @@ model PaymentAttempt {
   payment Payment? @relation(fields: [paymentId], references: [id])
 }
 
+model ExternalOrderSyncLog {
+  id                  String   @id @default(cuid())
+  batchId             String?
+  orderId             String
+  source              String
+  stage               String
+  status              String
+  existsInSabPaisa    Boolean?
+  localOrderFound     Boolean?
+  localOrderCreated   Boolean?
+  localRefreshSuccess Boolean?
+  forwardedToVendor   Boolean?
+  vendorStatusCode    Int?
+  message             String?
+  meta                Json?
+  createdAt           DateTime @default(now())
+
+  @@index([orderId, createdAt])
+  @@index([batchId, createdAt])
+  @@index([source, createdAt])
+}
+
 /**
  * -------------------- CART --------------------
  * Ownership invariant (enforced in service layer):

@@ -13,28 +13,28 @@ export async function POST(request) {
       }
     }
 
-    console.log("[SabPaisa][Terminal Debug] payload:", body?.payload || null);
-    console.log("[SabPaisa][Terminal Debug] endpoint:", body?.endpoint || null);
-    console.log(
-      "[SabPaisa][Terminal Debug] encryptedEncData:",
-      body?.encryptedEncData || null,
-    );
-    console.log(
-      "[SabPaisa][Terminal Debug] postedClientCode:",
-      body?.postedClientCode || null,
-    );
-    console.log(
-      "[SabPaisa][Terminal Debug] formAction:",
-      body?.formAction || null,
-    );
-    console.log(
-      "[SabPaisa][Terminal Debug] timestamp:",
-      body?.timestamp || null,
-    );
+    // console.log("[SabPaisa][Terminal Debug] payload:", body?.payload || null);
+    // console.log("[SabPaisa][Terminal Debug] endpoint:", body?.endpoint || null);
+    // console.log(
+    //   "[SabPaisa][Terminal Debug] encryptedEncData:",
+    //   body?.encryptedEncData || null,
+    // );
+    // console.log(
+    //   "[SabPaisa][Terminal Debug] postedClientCode:",
+    //   body?.postedClientCode || null,
+    // );
+    // console.log(
+    //   "[SabPaisa][Terminal Debug] formAction:",
+    //   body?.formAction || null,
+    // );
+    // console.log(
+    //   "[SabPaisa][Terminal Debug] timestamp:",
+    //   body?.timestamp || null,
+    // );
 
-    if (!body) {
-      console.log("[SabPaisa][Terminal Debug] note: received empty debug body");
-    }
+    // if (!body) {
+    //   console.log("[SabPaisa][Terminal Debug] note: received empty debug body");
+    // }
 
     return NextResponse.json({ ok: true });
   } catch (error) {

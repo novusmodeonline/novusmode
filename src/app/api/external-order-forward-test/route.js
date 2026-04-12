@@ -12,7 +12,7 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    console.log("[ExternalOrderForwardTest] payload:", body);
+    // console.log("[ExternalOrderForwardTest] payload:", body);
 
     return NextResponse.json({
       ok: true,

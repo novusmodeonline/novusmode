@@ -25,7 +25,7 @@ function resolveIpAddress(body, request) {
 export async function POST(request) {
   try {
     const body = await request.json();
-    console.log("/api/orders/metadata received body:", body);
+    // console.log("/api/orders/metadata received body:", body);
     const orderId = sanitize(body?.orderId || body?.id);
     const IPAddress = resolveIpAddress(body || {}, request);
 

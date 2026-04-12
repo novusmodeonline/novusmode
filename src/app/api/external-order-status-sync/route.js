@@ -1,10 +1,18 @@
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import fs from "node:fs/promises";
+import path from "node:path";
 import { buildRealisticIndianPhone } from "@/lib/invoice/getMockAddress";
 import { getRandomIndianName } from "@/lib/invoice/getInvoiceName";
 import { pickProductsForInvoice } from "@/lib/invoice/productPicker";
 import { checkSabPaisaStatus } from "@/lib/sabpaisa-enquiry";
 import { refreshOrderStatus } from "@/app/actions/checkOrderStatus";
+
+const BATCH_RESULTS_DIR = path.join(
+  process.cwd(),
+  "tmp",
+  "external-order-status-sync",
+);
 
 function resolveExternalOrderWebhookUrl() {
   return (
@@ -14,6 +22,106 @@ function resolveExternalOrderWebhookUrl() {
       process.env.THIRD_PARTY_VENDOR_WEBHOOK_URL,
     ].find((value) => String(value || "").trim()) || ""
   );
+}
+
+async function createSyncLog({
+  batchId,
+  orderId,
+  source = "external-order-status-sync",
+  stage,
+  status,
+  existsInSabPaisa = null,
+  localOrderFound = null,
+  localOrderCreated = null,
+  localRefreshSuccess = null,
+  forwardedToVendor = null,
+  vendorStatusCode = null,
+  message = null,
+  meta = null,
+}) {
+  try {
+    // Ensure meta is JSON-serializable by converting to plain object
+    const safeMeta = meta
+      ? JSON.parse(JSON.stringify(meta))
+      : null;
+
+    console.log("[createSyncLog] Creating log entry", {
+      batchId,
+      orderId,
+      stage,
+      status,
+    });
+
+    const result = await prisma.externalOrderSyncLog.create({
+      data: {
+        batchId,
+        orderId,
+        source,
+        stage,
+        status,
+        existsInSabPaisa,
+        localOrderFound,
+        localOrderCreated,
+        localRefreshSuccess,
+        forwardedToVendor,
+        vendorStatusCode,
+        message,
+        meta: safeMeta,
+      },
+    });
+
+    console.log("[createSyncLog] ✅ Log created successfully", {
+      orderId,
+      stage,
+      id: result.id,
+    });
+  } catch (logError) {
+    console.error("[createSyncLog] ❌ Failed to write sync log", {
+      orderId,
+      stage,
+      status,
+      errorMessage: logError?.message,
+      errorCode: logError?.code,
+      errorName: logError?.name,
+      prismaCode: logError?.meta?.code,
+      fullError: String(logError),
+    });
+  }
+}
+
+async function persistBatchResultToFile({
+  batchId,
+  requestBody,
+  orderIds,
+  summary,
+  results,
+}) {
+  const fileName = `${batchId}.json`;
+  const absolutePath = path.join(BATCH_RESULTS_DIR, fileName);
+
+  await fs.mkdir(BATCH_RESULTS_DIR, { recursive: true });
+
+  const payload = {
+    batchId,
+    generatedAt: new Date().toISOString(),
+    request: {
+      orderIds,
+      rawBody: requestBody,
+    },
+    summary,
+    results,
+  };
+
+  await fs.writeFile(absolutePath, JSON.stringify(payload, null, 2), "utf8");
+
+  return {
+    fileName,
+    relativePath: path.posix.join(
+      "tmp",
+      "external-order-status-sync",
+      fileName,
+    ),
+  };
 }
 
 function isAuthorized(request) {
@@ -316,6 +424,56 @@ function buildVendorWebhookPayload({
   };
 }
 
+function isSabPaisaOrderMissingError(error) {
+  const message = String(error?.message || "").toLowerCase();
+
+  return (
+    message.includes("no encrypted payload") ||
+    message.includes("http error: 400") ||
+    message.includes("http error: 404") ||
+    message.includes("order not found") ||
+    message.includes("does not exist in sabpaisa")
+  );
+}
+
+function buildMissingSabPaisaPayload({ orderId, rawRequest, reason }) {
+  return {
+    event: "sabpaisa.callback",
+    note: "sabpaisa-order-not-found",
+    clientTxnId: orderId,
+    order: {
+      id: orderId,
+      source: null,
+      status: "not_found_in_sabpaisa",
+      amount: null,
+      finalAmount: null,
+      discountAmount: null,
+      email: null,
+      phone: null,
+      addressId: null,
+    },
+    payment: {
+      id: null,
+      status: "not_found",
+      amount: null,
+      responseCode: "404",
+      responseMessage: reason || "Order does not exist in SabPaisa",
+      mode: null,
+      gatewayId: null,
+      rrn: null,
+    },
+    callback: {
+      statusCode: "404",
+      paymentStatus: "not_found",
+      orderStatus: "not_found_in_sabpaisa",
+      redirectStatus: "failed",
+      payload: null,
+      rawRequest,
+      reason: reason || "order_not_found_in_sabpaisa",
+    },
+  };
+}
+
 async function forwardToExternalVendor(endpoint, requestBody, orderSource) {
   if (!endpoint) {
     return {
@@ -403,6 +561,7 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const orderIds = extractOrderIds(body);
+    const batchId = `bulk-sync-${Date.now()}-${Math.floor(Math.random() * 1e6)}`;
 
     if (!orderIds.length) {
       return NextResponse.json(
@@ -417,9 +576,13 @@ export async function POST(request) {
 
     const webhookEndpoint = resolveExternalOrderWebhookUrl();
     const results = [];
+    const missingInSabPaisaOrderIds = [];
+
+    // Batch started (removed: only final log per order)
 
     for (const orderId of orderIds) {
       try {
+
         const enquiry = await checkSabPaisaStatus(orderId);
         const callbackResult = mapSabPaisaStatus(
           enquiry.statusCode,
@@ -520,6 +683,21 @@ export async function POST(request) {
           });
         }
 
+        // Create single final log entry for this order
+        await createSyncLog({
+          batchId,
+          orderId,
+          stage: "final",
+          status: "success",
+          existsInSabPaisa: true,
+          localOrderFound: !createdOrder,
+          localOrderCreated: createdOrder,
+          localRefreshSuccess: Boolean(localResult?.ok),
+          forwardedToVendor: forwarded?.forwardedToVendor || false,
+          vendorStatusCode: forwarded?.status || null,
+          message: `Order ${callbackResult.orderStatus} | Payment ${callbackResult.paymentStatus} | Forwarded: ${forwarded?.forwardedToVendor}`,
+        });
+
         results.push({
           orderId,
           ok: true,
@@ -545,14 +723,78 @@ export async function POST(request) {
           vendorPayload,
         });
       } catch (error) {
+        const errorMessage =
+          error?.message || "Failed to fetch transaction status";
+        const missingInSabPaisa = isSabPaisaOrderMissingError(error);
+
+        if (missingInSabPaisa) {
+          missingInSabPaisaOrderIds.push(orderId);
+
+          const vendorPayload = buildMissingSabPaisaPayload({
+            orderId,
+            rawRequest: body,
+            reason: errorMessage,
+          });
+          const forwarded = await forwardToExternalVendor(
+            webhookEndpoint,
+            vendorPayload,
+            "external",
+          );
+
+          // Create single final log entry for missing order
+          await createSyncLog({
+            batchId,
+            orderId,
+            stage: "final",
+            status: "failed",
+            existsInSabPaisa: false,
+            localOrderFound: false,
+            localOrderCreated: false,
+            localRefreshSuccess: false,
+            forwardedToVendor: forwarded?.forwardedToVendor || false,
+            vendorStatusCode: forwarded?.status || null,
+            message: `Order not found in SabPaisa | Forwarded: ${forwarded?.forwardedToVendor}`,
+          });
+
+          results.push({
+            orderId,
+            ok: false,
+            createdOrder: false,
+            existsInSabPaisa: false,
+            forwardedToVendor: forwarded?.forwardedToVendor || false,
+            paymentStatus: "not_found",
+            orderStatus: "not_found_in_sabpaisa",
+            message: "Order does not exist in SabPaisa.",
+            forwarded,
+            vendorPayload,
+          });
+
+          continue;
+        }
+
+        // Create single final log entry for processing error
+        await createSyncLog({
+          batchId,
+          orderId,
+          stage: "final",
+          status: "failed",
+          existsInSabPaisa: null,
+          localOrderFound: null,
+          localOrderCreated: false,
+          localRefreshSuccess: false,
+          forwardedToVendor: false,
+          message: `Error: ${errorMessage}`,
+        });
+
         results.push({
           orderId,
           ok: false,
           createdOrder: false,
+          existsInSabPaisa: null,
           forwardedToVendor: false,
           paymentStatus: "error",
           orderStatus: "error",
-          message: error?.message || "Failed to fetch transaction status",
+          message: errorMessage,
           forwarded: {
             ok: false,
             forwardedToVendor: false,
@@ -565,17 +807,38 @@ export async function POST(request) {
     }
 
     const processedCount = results.length;
-    const forwardedCount = results.filter((item) => item.forwarded?.ok).length;
-    console.log(
-      `[external-order-status-sync] Processed ${processedCount} orders, forwarded ${forwardedCount} to vendor.`,
-    );
-    return NextResponse.json({
-      ok: true,
+    const forwardedCount = results.filter(
+      (item) => item.forwardedToVendor || item.forwarded?.forwardedToVendor,
+    ).length;
+    const missingInSabPaisaCount = missingInSabPaisaOrderIds.length;
+
+    const summary = {
       receivedCount: orderIds.length,
       processedCount,
       forwardedCount,
-      message: `${forwardedCount} of ${orderIds.length} order status fetched and sent to vendor.`,
+      missingInSabPaisaCount,
+      missingInSabPaisaOrderIds,
+      message: `${forwardedCount} of ${orderIds.length} orders sent to vendor. ${missingInSabPaisaCount} orders do not exist in SabPaisa.`,
+    };
+
+    const persistedResult = await persistBatchResultToFile({
+      batchId,
+      requestBody: body,
+      orderIds,
+      summary,
       results,
+    });
+
+    // Batch completed (removed: only final log per order)
+
+    // console.log(
+    //   `[external-order-status-sync] Processed ${processedCount} orders, forwarded ${forwardedCount} to vendor, missingInSabPaisa ${missingInSabPaisaCount}.`,
+    // );
+    return NextResponse.json({
+      ok: true,
+      batchId,
+      ...summary,
+      resultFile: persistedResult.relativePath,
     });
   } catch (error) {
     console.error("[external-order-status-sync] error:", error);

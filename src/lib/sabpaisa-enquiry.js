@@ -107,17 +107,17 @@ export async function checkSabPaisaStatus(clientTxnId) {
   // Docs sample: "clientCode=DJ020&clientTxnId=TESTING090725110510177"
   const rawString = `clientCode=${clientCode}&clientTxnId=${clientTxnId}`;
 
-  console.log("[SabPaisa][Enquiry] rawString (pre-encrypt):", rawString);
+  // console.log("[SabPaisa][Enquiry] rawString (pre-encrypt):", rawString);
 
   const statusTransEncData = await encryptSabPaisa(authKey, authIv, rawString);
 
-  console.log(
-    "[SabPaisa][Enquiry] statusTransEncData (HEX):",
-    statusTransEncData,
-  );
+  // console.log(
+  //   "[SabPaisa][Enquiry] statusTransEncData (HEX):",
+  //   statusTransEncData,
+  // );
 
   const enquiryUrl = resolveEnquiryUrl();
-  console.log("[SabPaisa][Enquiry] endpoint:", enquiryUrl);
+  // console.log("[SabPaisa][Enquiry] endpoint:", enquiryUrl);
 
   // Docs: Content-Type: application/json, body fields: clientCode + statusTransEncData
   const response = await fetch(enquiryUrl, {
@@ -129,7 +129,7 @@ export async function checkSabPaisaStatus(clientTxnId) {
     body: JSON.stringify({ clientCode, statusTransEncData }),
     cache: "no-store",
   });
-
+  // console.log("[SabPaisa][Enquiry] HTTP response status:", response);
   if (!response.ok) {
     throw new Error(
       `SabPaisa enquiry HTTP error: ${response.status} ${response.statusText}`,
@@ -137,7 +137,7 @@ export async function checkSabPaisaStatus(clientTxnId) {
   }
 
   const json = await response.json();
-  console.log("[SabPaisa][Enquiry] raw JSON response:", json);
+  // console.log("[SabPaisa][Enquiry] raw JSON response:", json);
 
   // Docs: response field is "statusResponseData"
   const encResponse =
@@ -153,7 +153,7 @@ export async function checkSabPaisaStatus(clientTxnId) {
 
   const parsed = decryptSabPaisaResponse(encResponse);
 
-  console.log("[SabPaisa][Enquiry] decrypted payload:", parsed);
+  // console.log("[SabPaisa][Enquiry] decrypted payload:", parsed);
 
   return {
     statusCode: String(

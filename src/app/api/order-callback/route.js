@@ -244,6 +244,51 @@ function resolveExternalOrderWebhookUrl() {
   );
 }
 
+async function createExternalSyncLog({
+  orderId,
+  stage,
+  status,
+  existsInSabPaisa = null,
+  localOrderFound = null,
+  localOrderCreated = null,
+  localRefreshSuccess = null,
+  forwardedToVendor = null,
+  vendorStatusCode = null,
+  message = null,
+  meta = null,
+}) {
+  if (!orderId) {
+    return;
+  }
+
+  try {
+    await prisma.externalOrderSyncLog.create({
+      data: {
+        batchId: null,
+        orderId,
+        source: "order-callback",
+        stage,
+        status,
+        existsInSabPaisa,
+        localOrderFound,
+        localOrderCreated,
+        localRefreshSuccess,
+        forwardedToVendor,
+        vendorStatusCode,
+        message,
+        meta,
+      },
+    });
+  } catch (logError) {
+    console.error("[order-callback] failed to write external sync log", {
+      orderId,
+      stage,
+      status,
+      error: logError?.message || logError,
+    });
+  }
+}
+
 async function forwardExternalOrderToVendor({
   clientTxnId,
   order,
@@ -491,16 +536,16 @@ async function handleCallback(request) {
       payload.encdata ||
       payload.response;
 
-    console.log("[SabPaisa][Callback] request source:", source);
-    console.log("[SabPaisa][Callback] incoming payload:", payload);
-    console.log(
-      "[SabPaisa][Callback] raw encResponse:",
-      encResponseValue || null,
-    );
-    console.log(
-      "[SabPaisa][Callback] raw encResponse length:",
-      typeof encResponseValue === "string" ? encResponseValue.length : null,
-    );
+    // console.log("[SabPaisa][Callback] request source:", source);
+    // console.log("[SabPaisa][Callback] incoming payload:", payload);
+    // console.log(
+    //   "[SabPaisa][Callback] raw encResponse:",
+    //   encResponseValue || null,
+    // );
+    // console.log(
+    //   "[SabPaisa][Callback] raw encResponse length:",
+    //   typeof encResponseValue === "string" ? encResponseValue.length : null,
+    // );
 
     if (!encResponseValue || typeof encResponseValue !== "string") {
       return NextResponse.json(
@@ -513,9 +558,9 @@ async function handleCallback(request) {
     const statusCode = normalizeStatusCode(parsed.statusCode);
     clientTxnId = String(parsed.clientTxnId || "");
 
-    console.log("[SabPaisa][Callback] decrypted payload:", parsed);
-    console.log("[SabPaisa][Callback] statusCode:", statusCode);
-    console.log("[SabPaisa][Callback] clientTxnId:", clientTxnId);
+    // console.log("[SabPaisa][Callback] decrypted payload:", parsed);
+    // console.log("[SabPaisa][Callback] statusCode:", statusCode);
+    // console.log("[SabPaisa][Callback] clientTxnId:", clientTxnId);
 
     if (!statusCode || !clientTxnId) {
       return NextResponse.json(
@@ -538,6 +583,19 @@ async function handleCallback(request) {
     });
     let externalOrderNote = null;
 
+    await createExternalSyncLog({
+      orderId: clientTxnId,
+      stage: "callback_received",
+      status: "info",
+      existsInSabPaisa: true,
+      message: "SabPaisa callback decrypted",
+      meta: {
+        statusCode,
+        paymentStatus: callbackResult.paymentStatus,
+        orderStatus: callbackResult.orderStatus,
+      },
+    });
+
     if (!order) {
       externalFlow = true;
 
@@ -549,6 +607,20 @@ async function handleCallback(request) {
 
       order = createdExternalOrder.order;
       externalOrderNote = createdExternalOrder.externalOrderNote;
+
+      await createExternalSyncLog({
+        orderId: clientTxnId,
+        stage: "local_order_creation",
+        status: "success",
+        existsInSabPaisa: true,
+        localOrderFound: false,
+        localOrderCreated: true,
+        message: "Created local external order from callback",
+        meta: {
+          externalOrderNote,
+          orderSource: order?.source || null,
+        },
+      });
 
       await prisma.paymentAttempt.create({
         data: {
@@ -576,6 +648,21 @@ async function handleCallback(request) {
       existingPayment?.webhookVerified &&
       isTerminalPaymentStatus(existingPayment.status)
     ) {
+      await createExternalSyncLog({
+        orderId: clientTxnId,
+        stage: "duplicate_callback",
+        status: "skipped",
+        existsInSabPaisa: true,
+        localOrderFound: true,
+        localOrderCreated: false,
+        localRefreshSuccess: true,
+        message: "Duplicate terminal callback ignored",
+        meta: {
+          paymentId: existingPayment.id,
+          paymentStatus: existingPayment.status,
+        },
+      });
+
       await prisma.paymentAttempt.create({
         data: {
           paymentId: existingPayment.id,
@@ -725,6 +812,22 @@ async function handleCallback(request) {
       },
     });
 
+    await createExternalSyncLog({
+      orderId: clientTxnId,
+      stage: "local_refresh",
+      status: "success",
+      existsInSabPaisa: true,
+      localOrderFound: true,
+      localOrderCreated: Boolean(externalOrderNote),
+      localRefreshSuccess: true,
+      message: "Order and payment updated from callback",
+      meta: {
+        orderStatus,
+        paymentStatus,
+        paymentId: payment.id,
+      },
+    });
+
     let vendorForward = null;
 
     if (order.source === "external") {
@@ -785,6 +888,27 @@ async function handleCallback(request) {
           },
         },
       });
+
+      await createExternalSyncLog({
+        orderId: clientTxnId,
+        stage: "vendor_forward",
+        status: vendorForward?.ok
+          ? "success"
+          : vendorForward?.skipped
+            ? "skipped"
+            : "failed",
+        existsInSabPaisa: true,
+        localOrderFound: true,
+        localOrderCreated: Boolean(externalOrderNote),
+        localRefreshSuccess: true,
+        forwardedToVendor: vendorForward?.ok || false,
+        vendorStatusCode: vendorForward?.status || null,
+        message: vendorForward?.reason || vendorForward?.statusText || null,
+        meta: {
+          endpoint: vendorForward?.endpoint || null,
+          responseBody: vendorForward?.responseBody || null,
+        },
+      });
     }
 
     console.log("[SabPaisa][Callback] order updated:", {
@@ -819,6 +943,21 @@ async function handleCallback(request) {
     }
 
     console.error("SabPaisa callback error", error);
+
+    await createExternalSyncLog({
+      orderId: clientTxnId,
+      stage: "callback_error",
+      status: "failed",
+      existsInSabPaisa: null,
+      localOrderFound: null,
+      localOrderCreated: false,
+      localRefreshSuccess: false,
+      forwardedToVendor: false,
+      message: error?.message || "Unable to process callback",
+      meta: {
+        externalFlow,
+      },
+    });
 
     if (isBrowserRedirect(request) && !externalFlow) {
       const safeId = encodeURIComponent(clientTxnId || "unknown");

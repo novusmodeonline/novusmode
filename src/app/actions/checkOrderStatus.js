@@ -45,14 +45,14 @@ export async function refreshOrderStatus(orderId, enquiryResult = null) {
     });
     const localOrderFound = Boolean(order);
 
-    console.log(
-      "[refreshOrderStatus] statusCode:",
-      statusCode,
-      "orderId:",
-      orderId,
-      "localOrderFound:",
-      localOrderFound,
-    );
+    // console.log(
+    //   "[refreshOrderStatus] statusCode:",
+    //   statusCode,
+    //   "orderId:",
+    //   orderId,
+    //   "localOrderFound:",
+    //   localOrderFound,
+    // );
 
     const markAttempt = (note) =>
       prisma.paymentAttempt.create({
