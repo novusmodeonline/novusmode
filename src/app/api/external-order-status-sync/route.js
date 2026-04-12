@@ -435,6 +435,8 @@ function isSabPaisaOrderMissingError(error) {
 }
 
 function buildMissingSabPaisaPayload({ orderId, rawRequest, reason }) {
+  const failureReason = reason || "Order not found in SabPaisa";
+
   return {
     event: "sabpaisa.callback",
     note: "sabpaisa-order-not-found",
@@ -442,7 +444,7 @@ function buildMissingSabPaisaPayload({ orderId, rawRequest, reason }) {
     order: {
       id: orderId,
       source: null,
-      status: "not_found_in_sabpaisa",
+      status: "failed",
       amount: null,
       finalAmount: null,
       discountAmount: null,
@@ -452,22 +454,34 @@ function buildMissingSabPaisaPayload({ orderId, rawRequest, reason }) {
     },
     payment: {
       id: null,
-      status: "not_found",
+      status: "failed",
       amount: null,
       responseCode: "404",
-      responseMessage: reason || "Order does not exist in SabPaisa",
+      responseMessage: failureReason,
       mode: null,
       gatewayId: null,
       rrn: null,
     },
     callback: {
       statusCode: "404",
-      paymentStatus: "not_found",
-      orderStatus: "not_found_in_sabpaisa",
+      paymentStatus: "failed",
+      orderStatus: "failed",
       redirectStatus: "failed",
-      payload: null,
+      payload: {
+        clientTxnId: orderId,
+        status: "FAILED",
+        responseCode: "404",
+        statusCode: "404",
+        sabpaisaMessage: failureReason,
+        bankMessage: failureReason,
+        amount: null,
+        paidAmount: null,
+        paymentMode: null,
+        sabpaisaTxnId: null,
+        rrn: null,
+      },
       rawRequest,
-      reason: reason || "order_not_found_in_sabpaisa",
+      reason: failureReason,
     },
   };
 }
@@ -750,7 +764,7 @@ export async function POST(request) {
             localRefreshSuccess: false,
             forwardedToVendor: forwarded?.forwardedToVendor || false,
             vendorStatusCode: forwarded?.status || null,
-            message: `Order not found in SabPaisa | Forwarded: ${forwarded?.forwardedToVendor}`,
+            message: `Order failed | Reason: ${errorMessage} | Forwarded: ${forwarded?.forwardedToVendor}`,
           });
 
           results.push({
@@ -759,9 +773,9 @@ export async function POST(request) {
             createdOrder: false,
             existsInSabPaisa: false,
             forwardedToVendor: forwarded?.forwardedToVendor || false,
-            paymentStatus: "not_found",
-            orderStatus: "not_found_in_sabpaisa",
-            message: "Order does not exist in SabPaisa.",
+            paymentStatus: "failed",
+            orderStatus: "failed",
+            message: errorMessage || "Order not found in SabPaisa.",
             forwarded,
             vendorPayload,
           });
