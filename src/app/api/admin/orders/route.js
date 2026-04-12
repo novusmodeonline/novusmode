@@ -1,5 +1,6 @@
 // app/api/admin/orders/route.js
 import prisma from "@/lib/prisma";
+import { requireAdminApiSession } from "@/lib/admin-auth";
 import { NextResponse } from "next/server";
 
 function getISTStartOfDay(dateStr) {
@@ -11,19 +12,37 @@ function getISTEndOfDay(dateStr) {
 }
 
 export async function GET(req) {
+  const auth = await requireAdminApiSession();
+  if (!auth.ok) {
+    return auth.response;
+  }
+
   const { searchParams } = new URL(req.url);
 
+  const todayIST = new Date().toLocaleDateString("en-CA", {
+    timeZone: "Asia/Kolkata",
+  });
+
   const page = Number(searchParams.get("page") || 1);
-  const status = searchParams.get("status");
-  const from = searchParams.get("from");
-  const to = searchParams.get("to");
+  const orderId = searchParams.get("orderId")?.trim() || "";
+  const status = searchParams.get("status") ?? "paid";
+  const from = searchParams.get("from") ?? todayIST;
+  const to = searchParams.get("to") ?? todayIST;
 
   const limit = 100;
   const skip = (page - 1) * limit;
+  const hasOrderIdFilter = Boolean(orderId);
 
   const where = {
-    ...(status && { status }),
-    ...(from || to
+    ...(hasOrderIdFilter
+      ? {
+          id: {
+            contains: orderId,
+          },
+        }
+      : {}),
+    ...(!hasOrderIdFilter && status !== "all" && status ? { status } : {}),
+    ...(!hasOrderIdFilter && (from || to)
       ? {
           createdAt: {
             ...(from && { gte: getISTStartOfDay(from) }),
@@ -51,6 +70,7 @@ export async function GET(req) {
     prisma.order.aggregate({
       where,
       _sum: {
+        finalAmount: true,
         amount: true,
       },
     }),
@@ -59,7 +79,8 @@ export async function GET(req) {
   return NextResponse.json({
     orders,
     totalCount: countResult,
-    totalAmount: sumResult._sum.amount / 100 || 0,
+    totalAmount: sumResult._sum.finalAmount ?? sumResult._sum.amount ?? 0,
+    orderId,
     page,
     totalPages: Math.ceil(countResult / limit),
   });

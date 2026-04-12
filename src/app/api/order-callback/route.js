@@ -417,12 +417,14 @@ async function createExternalOrderFromCallback(
   );
   const addressId = await pickRandomAddressId();
   const isTestOrder = finalAmount < 200;
+  const isFailedOrder =
+    String(callbackResult?.orderStatus || "").toLowerCase() === "failed";
 
   let originalAmount = finalAmount;
   let discountAmount = 0;
   let orderItems = [];
 
-  if (!isTestOrder) {
+  if (!isTestOrder && !isFailedOrder) {
     const products = await prisma.product.findMany({
       where: { inStock: { gt: 0 } },
       select: {
@@ -441,8 +443,6 @@ async function createExternalOrderFromCallback(
         maxDiscount: 500,
       });
 
-      originalAmount = Math.round(Number(picked.total || finalAmount));
-      discountAmount = Math.max(0, originalAmount - finalAmount);
       orderItems = (picked.products || []).map((product) => ({
         productId: product.id,
         title: product.title,
@@ -453,6 +453,16 @@ async function createExternalOrderFromCallback(
         selectedSize: product.defaultSize || null,
         sizeMetric: product.sizeMetric || null,
       }));
+
+      const orderItemsTotal = Math.round(
+        orderItems.reduce(
+          (sum, item) => sum + Number(item.price || 0) * Number(item.quantity || 1),
+          0,
+        ),
+      );
+
+      originalAmount = orderItemsTotal || finalAmount;
+      discountAmount = Math.max(0, originalAmount - finalAmount);
     }
   }
 

@@ -3,7 +3,7 @@ import fs from "fs";
 import path from "path";
 import React from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import InvoiceTemplate from "../src/invoice/InvoiceTemplate.js";
+import InvoiceTemplate from "../invoice/InvoiceTemplate.js";
 
 const invoicePath = process.argv[2];
 const invoice = JSON.parse(fs.readFileSync(invoicePath, "utf8"));

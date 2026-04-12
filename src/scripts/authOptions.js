@@ -25,14 +25,20 @@ export const authOptions = {
           }
           const isValid = await bcrypt.compare(
             credentials.password,
-            user.password
+            user.password,
           );
           if (!isValid) {
             const error = new Error("Incorrect Password, Please Try Again!");
             error.statusCode = "400";
             throw error;
           }
-          return { id: user.id, email: user.email, name: user.name, phone: user.phone };
+          return {
+            id: user.id,
+            email: user.email,
+            name: user.name,
+            phone: user.phone,
+            role: user.role,
+          };
         } catch (e) {
           throw new Error(e.message);
         }
@@ -50,6 +56,7 @@ export const authOptions = {
       if (user) {
         token.id = user.id;
         token.phone = user.phone;
+        token.role = user.role;
       }
       return token;
     },
@@ -57,6 +64,7 @@ export const authOptions = {
       if (token?.id) {
         session.user.id = token.id;
         session.user.phone = token.phone; // Add it to session.user
+        session.user.role = token.role;
       }
       return session;
     },

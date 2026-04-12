@@ -8,6 +8,7 @@ export const GST_BY_SUBCATEGORY = {
   cord: 5,
   jumpsuit: 5,
   beach: 5,
+  socks: 5,
 
   // 🧥 Outerwear – 12%
   jackets: 12,
