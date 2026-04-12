@@ -7,9 +7,14 @@ async function safeGetServerSession() {
   try {
     return await getServerSession(authOptions);
   } catch (error) {
-    console.error("[admin-auth] session parse failed", {
-      message: error?.message || "Unknown session error",
-    });
+    const message = String(error?.message || "Unknown session error");
+
+    // During build/static analysis, Next may throw dynamic server usage errors.
+    // Treat them as expected and avoid noisy logs.
+    if (!message.includes("Dynamic server usage")) {
+      console.error("[admin-auth] session parse failed", { message });
+    }
+
     return null;
   }
 }

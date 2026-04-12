@@ -421,7 +421,10 @@ async function processImportRows(rows, dryRun, onProgress) {
 export async function GET() {
   const auth = await requireAdminApiSession();
   if (!auth.ok) {
-    return auth.response;
+    return auth.response || NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   return NextResponse.json({
@@ -439,7 +442,10 @@ export async function GET() {
 export async function POST(request) {
   const auth = await requireAdminApiSession();
   if (!auth.ok) {
-    return auth.response;
+    return auth.response || NextResponse.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   try {

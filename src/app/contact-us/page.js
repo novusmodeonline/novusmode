@@ -1,5 +1,4 @@
 import ContactUsComponent from "@/components/ContactUsComponent";
-import { Metadata } from "next";
 
 export const metadata = {
   title: "Contact Us - NovusMode",

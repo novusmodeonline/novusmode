@@ -71,7 +71,10 @@ function pickCustomerName(order) {
 export async function GET(request, context) {
   const auth = await requireAdminApiSession();
   if (!auth.ok) {
-    return auth.response;
+    return auth.response || Response.json(
+      { ok: false, error: "Unauthorized" },
+      { status: 401 },
+    );
   }
 
   const routeParams = await context?.params;
