@@ -18,7 +18,7 @@ import { shippingCharges } from "@/helper/common";
 import { useCouponStore } from "@/app/_zustand/useCouponStore"; // ✅ NEW
 
 const SHIPPING_ENABLED = ["1", "true", "yes", "on"].includes(
-  String(process.env.NEXT_PUBLIC_SABPAISA_SHIPPING_ENABLED || "")
+  String(process.env.NEXT_PUBLIC_SHIPPING_ENABLED || "")
     .trim()
     .toLowerCase(),
 );

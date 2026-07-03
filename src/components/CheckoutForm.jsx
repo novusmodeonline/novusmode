@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { LockKeyhole, ShieldCheck, BadgeCheck } from "lucide-react";
-import SabPaisaButton from "@/components/SabPaisaButton";
 
 const PLATFORM_FEE = 9;
 
@@ -62,9 +61,9 @@ export default function CheckoutForm() {
               Checkout
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              Enter your billing details to continue with SabPaisa. Your
-              transaction is protected with SSL encryption and secure gateway
-              processing.
+              Enter your billing details to continue with our secure checkout. A
+              new payment gateway is being integrated, and cash on delivery
+              remains available for now.
             </p>
           </div>
 
@@ -211,17 +210,9 @@ export default function CheckoutForm() {
                   Ready to Pay
                 </div>
                 <p className="mb-4 text-sm leading-6 text-slate-700">
-                  Your details are validated. Continue to the SabPaisa gateway
-                  to complete the payment.
+                  Your details are validated. The legacy payment flow has been
+                  retired and a new gateway will be enabled soon.
                 </p>
-                <SabPaisaButton
-                  payerName={preparedPayment.payerName}
-                  payerEmail={preparedPayment.payerEmail}
-                  payerMobile={preparedPayment.payerMobile}
-                  amount={preparedPayment.amount}
-                  clientTxnId={preparedPayment.clientTxnId}
-                  orderId={preparedPayment.clientTxnId}
-                />
               </div>
             )}
           </form>

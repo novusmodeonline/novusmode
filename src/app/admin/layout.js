@@ -22,12 +22,6 @@ export default async function AdminLayout({ children }) {
             >
               External Sync Logs
             </Link>
-            <Link
-              href="/admin/sabpaisa-import"
-              className="px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200"
-            >
-              SabPaisa Import
-            </Link>
           </nav>
         </header>
         {children}

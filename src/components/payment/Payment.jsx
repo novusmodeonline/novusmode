@@ -1,11 +1,11 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
+import { CheckCircle, XCircle } from "lucide-react";
 import { useProductStore } from "@/app/_zustand/store";
 import {
-  SabPaisaButton,
   PaymentMethodSelector,
   SavedCards,
   CardPaymentForm,
@@ -39,8 +39,16 @@ export default function Payment({
   const payerEmail = contact?.email || "";
   const payerMobile = contact?.phone || "";
   const { address1, address2, city, state, pincode } = address;
-  const [method, setMethod] = useState("sabpaisa");
+  const [method, setMethod] = useState("cod");
   const [codLoading, setCodLoading] = useState(false);
+  const [upiLoading, setUpiLoading] = useState(false);
+  const [qrCodeImage, setQrCodeImage] = useState("");
+  const [paypointOrderId, setPaypointOrderId] = useState("");
+  const [upiError, setUpiError] = useState("");
+  const [polling, setPolling] = useState(false);
+  const [qrSuccess, setQrSuccess] = useState(false);
+  const [qrError, setQrError] = useState(false);
+  const [timer, setTimer] = useState(300);
   const router = useRouter();
   const { clearCart } = useProductStore();
 
@@ -108,19 +116,126 @@ export default function Payment({
 
     if (method === "netbanking") return !bank;
 
+    if (method === "upi_qr") return polling || (qrCodeImage && !qrError);
+
     return false;
   };
 
+  const handleUpiQrPayment = async () => {
+    try {
+      setUpiLoading(true);
+      setUpiError("");
+      setQrCodeImage("");
+      setQrError(false);
+      setQrSuccess(false);
+      setTimer(300);
+
+      const receipt = orderId || `paypoint-${Date.now()}`;
+      const payload = {
+        amount: Number(PAY_AMOUNT),
+        name: payerName,
+        mobileNo: payerMobile,
+        receipt,
+      };
+
+      const res = await fetch("/api/payment/initiate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || "Unable to generate UPI QR code");
+      }
+
+      const nextOrderId = data.orderId || receipt;
+      setPaypointOrderId(nextOrderId);
+      setQrCodeImage(data.qrCodeImage || "");
+      setPolling(true);
+      onPay &&
+        onPay({
+          method: "upi_qr",
+          orderId: nextOrderId,
+          qrCodeImage: data.qrCodeImage,
+        });
+      toast.success("UPI QR code generated successfully");
+    } catch (err) {
+      console.error("UPI QR ERROR:", err);
+      setQrCodeImage("");
+      setPaypointOrderId("");
+      setPolling(false);
+      setQrError(true);
+      setUpiError(err.message || "Unable to generate UPI QR code");
+      toast.error(err.message || "Unable to generate UPI QR code");
+    } finally {
+      setUpiLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    if (!polling || !orderId || !paypointOrderId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `/api/payment/status?orderId=${encodeURIComponent(orderId)}&refId=${encodeURIComponent(paypointOrderId)}`,
+          { cache: "no-store" },
+        );
+        const data = await res.json();
+
+        if (data.status === "success") {
+          setQrSuccess(true);
+          setPolling(false);
+          clearInterval(interval);
+          router.push(`/order-confirmation?orderId=${orderId}&clearCart=1`);
+        }
+
+        if (data.status === "failed" || data.status === "expired") {
+          setQrError(true);
+          setPolling(false);
+          clearInterval(interval);
+        }
+      } catch (err) {
+        console.error("UPI QR STATUS ERROR:", err);
+      }
+    }, 3000);
+
+    return () => clearInterval(interval);
+  }, [polling, orderId, paypointOrderId, router]);
+
+  useEffect(() => {
+    if (!polling) return;
+
+    const interval = setInterval(() => {
+      setTimer((prev) => {
+        if (prev <= 1) {
+          setPolling(false);
+          setQrError(true);
+          return 0;
+        }
+
+        return prev - 1;
+      });
+    }, 1000);
+
+    return () => clearInterval(interval);
+  }, [polling]);
+
   const getButtonLabel = () => {
     switch (method) {
-      case "sabpaisa":
-        return "Continue to SabPaisa";
       case "card":
         return `Pay ₹${PAY_AMOUNT}`;
       case "netbanking":
         return "Proceed to Bank";
       case "cod":
         return "Place COD Order";
+      case "upi_qr":
+        if (polling) return "Waiting for Payment";
+        if (qrSuccess) return "Payment Successful";
+        if (qrCodeImage && !qrError) return "QR Generated";
+        return "Generate QR Code";
       default:
         return "Pay Now";
     }
@@ -133,11 +248,6 @@ export default function Payment({
 
     if (!orderId) {
       toast.error("Order not ready yet. Please try again.");
-      return;
-    }
-
-    if (method === "sabpaisa") {
-      onPay && onPay({ method: "sabpaisa", orderId });
       return;
     }
 
@@ -181,6 +291,11 @@ export default function Payment({
       return;
     }
 
+    if (method === "upi_qr") {
+      await handleUpiQrPayment();
+      return;
+    }
+
     const payload = { method, amount: PAY_AMOUNT };
 
     if (method === "card") {
@@ -207,39 +322,26 @@ export default function Payment({
       {/* PAYMENT METHOD SELECTOR */}
       <PaymentMethodSelector
         method={method}
-        order={["sabpaisa", "cod"]}
+        order={["cod", "upi_qr"]}
         onChange={(m) => {
           setMethod(m);
+          setQrCodeImage("");
+          setPaypointOrderId("");
+          setUpiError("");
+          setPolling(false);
+          setQrSuccess(false);
+          setQrError(false);
+          setTimer(300);
         }}
       />
 
+      <div className="bg-white border rounded-xl p-4 text-sm text-gray-700">
+        A new online payment gateway is being integrated. Cash on delivery is
+        available for now while the legacy payment flow is retired.
+      </div>
+
       {/* DYNAMIC FORMS */}
       <div className="space-y-4">
-        {/* SABPAISA */}
-        {method === "sabpaisa" && (
-          <div className="bg-white border rounded-xl p-4 space-y-3">
-            <p className="text-sm text-gray-700">
-              Pay securely using SabPaisa non-seamless checkout.
-            </p>
-            <div className="text-sm text-gray-600 space-y-1">
-              <div>Name: {payerName || "-"}</div>
-              <div>Email: {payerEmail || "-"}</div>
-              <div>Phone: {payerMobile || "-"}</div>
-              <div className="font-medium text-[var(--color-bg)]">
-                Amount: ₹{PAY_AMOUNT}
-              </div>
-            </div>
-            <SabPaisaButton
-              payerName={payerName}
-              payerEmail={payerEmail}
-              payerMobile={payerMobile}
-              amount={PAY_AMOUNT}
-              clientTxnId={orderId}
-              orderId={orderId}
-            />
-          </div>
-        )}
-
         {/* CARD */}
         {method === "card" && (
           <>
@@ -293,6 +395,98 @@ export default function Payment({
 
         {/* COD */}
         {method === "cod" && <CodPayment />}
+
+        {/* UPI QR */}
+        {method === "upi_qr" && (
+          <div className="space-y-4 rounded-xl border border-gray-200 bg-white p-4">
+            <h3 className="text-lg font-semibold text-gray-900">
+              Scan & Pay (UPI QR)
+            </h3>
+
+            <p className="text-sm text-gray-600">
+              Scan this QR using any UPI app such as Google Pay, PhonePe, Paytm,
+              or BHIM.
+            </p>
+
+            <div className="mt-4 flex w-full justify-center">
+              <div className="relative flex min-h-72 min-w-72 items-center justify-center">
+                {qrCodeImage ? (
+                  <img
+                    src={
+                      qrCodeImage.startsWith("data:")
+                        ? qrCodeImage
+                        : `data:image/png;base64,${qrCodeImage}`
+                    }
+                    alt="Scan to Pay"
+                    className="h-72 w-72 rounded-lg border object-contain shadow transition opacity-100"
+                  />
+                ) : (
+                  <div className="h-72 w-72 rounded-lg border bg-gray-100 shadow opacity-30" />
+                )}
+
+                {!qrCodeImage && !upiLoading && (
+                  <button
+                    type="button"
+                    onClick={handleUpiQrPayment}
+                    className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 rounded-lg border border-[var(--color-bg)] bg-[var(--color-bg)] px-4 py-2 text-white shadow-md"
+                  >
+                    Generate QR
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {qrCodeImage && !qrSuccess && !qrError && (
+              <p className="text-center text-sm text-gray-700">
+                QR is ready - complete the payment
+              </p>
+            )}
+
+            {(upiLoading || polling) && (
+              <div className="mt-4 flex flex-col items-center justify-center">
+                <div className="h-10 w-10 animate-spin rounded-full border-4 border-gray-300 border-t-[var(--color-bg)]" />
+
+                <p className="mt-3 text-sm text-gray-700">
+                  {upiLoading
+                    ? "Generating QR..."
+                    : "Waiting for payment confirmation..."}
+                </p>
+
+                {polling && (
+                  <p className="mt-1 text-xs text-gray-500">
+                    Time left: {Math.floor(timer / 60)}:
+                    {(timer % 60).toString().padStart(2, "0")}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {qrSuccess && (
+              <div className="mt-4 flex items-center justify-center gap-2 font-semibold text-green-600">
+                <CheckCircle size={22} /> Payment Successful! Redirecting...
+              </div>
+            )}
+
+            {qrError && (
+              <div className="mt-4 flex items-center justify-center gap-2 font-semibold text-red-600">
+                <XCircle size={22} /> Payment Failed or Expired - Try Again
+              </div>
+            )}
+
+            {upiError && <div className="text-sm text-red-600">{upiError}</div>}
+
+            {paypointOrderId && (
+              <div className="text-sm text-gray-600">
+                <div className="font-medium text-gray-700">Order ID</div>
+                <div className="break-all">{paypointOrderId}</div>
+              </div>
+            )}
+
+            <p className="text-center text-xs text-gray-500">
+              After completing the payment in your UPI app, return to this page.
+            </p>
+          </div>
+        )}
       </div>
 
       {/* FOOTER */}
@@ -305,10 +499,14 @@ export default function Payment({
 
           <button
             onClick={handlePay}
-            disabled={method === "sabpaisa" || isPayDisabled() || codLoading}
+            disabled={isPayDisabled() || codLoading || upiLoading}
             className="bg-[var(--color-bg)] text-white px-5 py-3 rounded-lg disabled:opacity-60"
           >
-            {codLoading ? "Placing Order..." : getButtonLabel()}
+            {codLoading
+              ? "Placing Order..."
+              : upiLoading
+                ? "Generating QR..."
+                : getButtonLabel()}
           </button>
         </div>
 

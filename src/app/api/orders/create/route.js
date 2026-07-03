@@ -106,9 +106,7 @@ export async function POST(req) {
 
     /* ------------------ SHIPPING CALCULATION ------------------ */
 
-    const shippingEnabled = isEnvFlagEnabled(
-      process.env.SABPAISA_SHIPPING_ENABLED,
-    );
+    const shippingEnabled = isEnvFlagEnabled(process.env.SHIPPING_ENABLED);
     let shippingAmount = 0;
     if (shippingEnabled) {
       try {

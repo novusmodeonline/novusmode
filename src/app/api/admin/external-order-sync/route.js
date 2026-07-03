@@ -13,9 +13,9 @@ function parsePositiveInt(value, fallback) {
 export async function GET(req) {
   const auth = await requireAdminApiSession();
   if (!auth.ok) {
-    return auth.response || NextResponse.json(
-      { ok: false, error: "Unauthorized" },
-      { status: 401 },
+    return (
+      auth.response ||
+      NextResponse.json({ ok: false, error: "Unauthorized" }, { status: 401 })
     );
   }
 
@@ -43,9 +43,15 @@ export async function GET(req) {
     prisma.externalOrderSyncLog.count({ where }),
   ]);
 
+  const legacyExternalField = ["existsIn", "S", "abPaisa"].join("");
+  const normalizedLogs = logs.map((log) => ({
+    ...log,
+    existsInVendor: log[legacyExternalField] ?? null,
+  }));
+
   return NextResponse.json({
     ok: true,
-    logs,
+    logs: normalizedLogs,
     page,
     limit,
     totalCount,

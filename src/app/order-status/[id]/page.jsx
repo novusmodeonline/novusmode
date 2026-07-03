@@ -153,17 +153,12 @@ export default function OrderStatusPage() {
   const view = useMemo(() => statusViewFromOrder(order), [order]);
 
   const payment = order?.payment || null;
-  const raw = payment?.rawResponse || {};
-  const transactionRef = raw?.sabpaisaTxnId || payment?.gatewayId || "-";
-  const paymentMode =
-    payment?.mode || raw?.paymentMode || order?.paymentMethod || "-";
+  const transactionRef = payment?.gatewayId || "-";
+  const paymentMode = payment?.mode || order?.paymentMethod || "-";
   const totalAmount =
     payment?.amount ?? order?.finalAmount ?? order?.amount ?? 0;
   const failureMessage =
-    raw?.bankMessage ||
-    raw?.sabpaisaMessage ||
-    payment?.responseMessage ||
-    "Transaction declined by bank.";
+    payment?.responseMessage || "Transaction declined by bank.";
 
   const handleCopy = async () => {
     if (!transactionRef || transactionRef === "-") return;

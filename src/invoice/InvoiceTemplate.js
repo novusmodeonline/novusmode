@@ -644,12 +644,12 @@ const styles = {
   },
   companyName: {
     margin: "8px 0 10px",
-    fontSize: 36,
+    fontSize: 18,
     fontWeight: 700,
   },
   metaLine: {
     margin: "5px 0",
-    fontSize: 24,
+    fontSize: 12,
     color: "#374151",
   },
   titleRow: {

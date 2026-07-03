@@ -4,9 +4,11 @@ import React from "react";
 
 export default function PaymentMethodSelector({ method, onChange, order }) {
   const METHOD_LABELS = {
-    sabpaisa: "Online Payment (SabPaisa)",
     cod: "Cash on Delivery",
+    upi_qr: "UPI QR Code",
   };
+
+  const visibleMethods = (order || []).filter((m) => METHOD_LABELS[m]);
 
   return (
     <div className="bg-white p-4 rounded-xl border space-y-3">
@@ -14,7 +16,7 @@ export default function PaymentMethodSelector({ method, onChange, order }) {
         Select Payment Method
       </h3>
 
-      {order.map((m) => (
+      {visibleMethods.map((m) => (
         <label key={m} className="flex items-center gap-3 cursor-pointer py-1">
           <input
             type="radio"

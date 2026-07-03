@@ -46,7 +46,7 @@ export default async function ExternalOrderSyncPage({ searchParams }) {
               <th className="px-3 py-2">Order ID</th>
               <th className="px-3 py-2">Batch ID</th>
               <th className="px-3 py-2">Status</th>
-              <th className="px-3 py-2">Exists in SabPaisa</th>
+              <th className="px-3 py-2">Exists in vendor</th>
               <th className="px-3 py-2">Forwarded</th>
               <th className="px-3 py-2">Vendor Code</th>
               <th className="px-3 py-2">Message</th>
@@ -64,7 +64,7 @@ export default async function ExternalOrderSyncPage({ searchParams }) {
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">{log.status}</td>
                 <td className="px-3 py-2 whitespace-nowrap">
-                  {renderBool(log.existsInSabPaisa)}
+                  {renderBool(log.existsInVendor)}
                 </td>
                 <td className="px-3 py-2 whitespace-nowrap">
                   {renderBool(log.forwardedToVendor)}

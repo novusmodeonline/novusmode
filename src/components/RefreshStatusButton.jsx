@@ -9,7 +9,7 @@ const COOLDOWN_SECONDS = 30;
 
 /**
  * Shows a "Refresh Status" button on pending payment orders.
- * Calls the SabPaisa Transaction Enquiry and refreshes the page on success.
+ * Calls the payment status refresh action and refreshes the page on success.
  *
  * Props:
  *  - orderId   {string}  Order id / clientTxnId
