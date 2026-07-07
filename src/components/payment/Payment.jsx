@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useEffect, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { CheckCircle, XCircle } from "lucide-react";
-import { useProductStore } from "@/app/_zustand/store";
 import {
   PaymentMethodSelector,
   SavedCards,
@@ -48,9 +47,10 @@ export default function Payment({
   const [polling, setPolling] = useState(false);
   const [qrSuccess, setQrSuccess] = useState(false);
   const [qrError, setQrError] = useState(false);
-  const [timer, setTimer] = useState(300);
+  const [secondsRemaining, setSecondsRemaining] = useState(300);
+  const finalCheckStartedRef = useRef(false);
+  const redirectingRef = useRef(false);
   const router = useRouter();
-  const { clearCart } = useProductStore();
 
   const [selectedSavedToken, setSelectedSavedToken] = useState(null);
   const [showNewCard, setShowNewCard] = useState(savedCards.length === 0);
@@ -128,7 +128,9 @@ export default function Payment({
       setQrCodeImage("");
       setQrError(false);
       setQrSuccess(false);
-      setTimer(300);
+      setSecondsRemaining(300);
+      finalCheckStartedRef.current = false;
+      redirectingRef.current = false;
 
       const receipt = orderId || `paypoint-${Date.now()}`;
       const payload = {
@@ -174,28 +176,41 @@ export default function Payment({
     }
   };
 
+  const redirectToConfirmation = useCallback(() => {
+    if (redirectingRef.current || !orderId) return;
+
+    redirectingRef.current = true;
+    setPolling(false);
+    router.push(
+      `/order-confirmation?orderId=${encodeURIComponent(orderId)}&clearCart=1`,
+    );
+  }, [orderId, router]);
+
+  const fetchPaymentStatus = useCallback(async () => {
+    const res = await fetch(
+      `/api/payment/status?orderId=${encodeURIComponent(orderId)}`,
+      { cache: "no-store" },
+    );
+    return res.json();
+  }, [orderId]);
+
   useEffect(() => {
-    if (!polling || !orderId || !paypointOrderId) return;
+    if (!polling || !orderId) return;
 
     const interval = setInterval(async () => {
       try {
-        const res = await fetch(
-          `/api/payment/status?orderId=${encodeURIComponent(orderId)}&refId=${encodeURIComponent(paypointOrderId)}`,
-          { cache: "no-store" },
-        );
-        const data = await res.json();
+        const data = await fetchPaymentStatus();
 
         if (data.status === "success") {
           setQrSuccess(true);
-          setPolling(false);
           clearInterval(interval);
-          router.push(`/order-confirmation?orderId=${orderId}&clearCart=1`);
+          redirectToConfirmation();
         }
 
-        if (data.status === "failed" || data.status === "expired") {
+        if (data.status === "failed") {
           setQrError(true);
-          setPolling(false);
           clearInterval(interval);
+          redirectToConfirmation();
         }
       } catch (err) {
         console.error("UPI QR STATUS ERROR:", err);
@@ -203,25 +218,49 @@ export default function Payment({
     }, 3000);
 
     return () => clearInterval(interval);
-  }, [polling, orderId, paypointOrderId, router]);
+  }, [fetchPaymentStatus, orderId, polling, redirectToConfirmation]);
 
   useEffect(() => {
     if (!polling) return;
 
     const interval = setInterval(() => {
-      setTimer((prev) => {
-        if (prev <= 1) {
-          setPolling(false);
-          setQrError(true);
-          return 0;
-        }
-
-        return prev - 1;
-      });
+      setSecondsRemaining((current) => Math.max(0, current - 1));
     }, 1000);
 
     return () => clearInterval(interval);
   }, [polling]);
+
+  useEffect(() => {
+    if (
+      !polling ||
+      secondsRemaining !== 0 ||
+      finalCheckStartedRef.current
+    ) {
+      return;
+    }
+
+    finalCheckStartedRef.current = true;
+    setPolling(false);
+
+    const runFinalCheck = async () => {
+      try {
+        const data = await fetchPaymentStatus();
+        if (data.status === "success") setQrSuccess(true);
+        if (data.status === "failed") setQrError(true);
+      } catch (err) {
+        console.error("UPI QR FINAL STATUS ERROR:", err);
+      } finally {
+        redirectToConfirmation();
+      }
+    };
+
+    runFinalCheck();
+  }, [
+    fetchPaymentStatus,
+    polling,
+    redirectToConfirmation,
+    secondsRemaining,
+  ]);
 
   const getButtonLabel = () => {
     switch (method) {
@@ -331,7 +370,9 @@ export default function Payment({
           setPolling(false);
           setQrSuccess(false);
           setQrError(false);
-          setTimer(300);
+          setSecondsRemaining(300);
+          finalCheckStartedRef.current = false;
+          redirectingRef.current = false;
         }}
       />
 
@@ -453,11 +494,12 @@ export default function Payment({
                 </p>
 
                 {polling && (
-                  <p className="mt-1 text-xs text-gray-500">
-                    Time left: {Math.floor(timer / 60)}:
-                    {(timer % 60).toString().padStart(2, "0")}
+                  <p className="mt-2 font-mono text-lg font-semibold text-gray-900">
+                    QR expires in {Math.floor(secondsRemaining / 60)}:
+                    {(secondsRemaining % 60).toString().padStart(2, "0")}
                   </p>
                 )}
+
               </div>
             )}
 

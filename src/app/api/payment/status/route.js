@@ -1,7 +1,9 @@
 import { NextResponse } from "next/server";
 
-import prisma from "@/lib/prisma";
 import { PAYPOINT_BASE_URL, getPaypointHeaders } from "@/config/paypoint";
+import prisma from "@/lib/prisma";
+
+const RECONCILIATION_DELAY_MS = 30_000;
 
 function extractTxnStatus(payload) {
   const data = payload?.data;
@@ -20,9 +22,13 @@ function extractTxnStatus(payload) {
   return null;
 }
 
+function statusResponse(status, source) {
+  return NextResponse.json({ ok: true, status, source });
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const orderId = searchParams.get("orderId");
+  const orderId = searchParams.get("orderId")?.trim();
 
   if (!orderId) {
     return NextResponse.json(
@@ -34,9 +40,7 @@ export async function GET(request) {
   try {
     const order = await prisma.order.findUnique({
       where: { id: orderId },
-      include: {
-        payment: true,
-      },
+      include: { payment: true },
     });
 
     if (!order) {
@@ -46,26 +50,38 @@ export async function GET(request) {
       );
     }
 
-    if (order.status === "PAID") {
-      return NextResponse.json({
-        ok: true,
-        status: "success",
-        txnStatus: 3,
-        source: "database",
+    const orderStatus = order.status.toUpperCase();
+
+    if (orderStatus === "PAID") {
+      console.log("[PayPointStatus] paid order resolved from database:", {
+        orderId,
       });
+      return statusResponse("success", "database");
     }
 
-    const refId = order.payment?.gatewayOrderId || order.externalRefId;
+    if (orderStatus === "FAILED") {
+      console.log("[PayPointStatus] failed order resolved from database:", {
+        orderId,
+      });
+      return statusResponse("failed", "database");
+    }
 
+    const ageMs = Date.now() - order.createdAt.getTime();
+    if (ageMs < RECONCILIATION_DELAY_MS) {
+      console.log("[PayPointStatus] pending inside database-only window:", {
+        orderId,
+        ageMs,
+      });
+      return statusResponse("pending", "database");
+    }
+
+    const refId = order.payment?.gatewayOrderId;
     if (!refId) {
-      return NextResponse.json(
-        {
-          ok: false,
-          status: "error",
-          message: "Gateway reference not found",
-        },
-        { status: 400 },
-      );
+      console.warn("[PayPointStatus] gateway reference unavailable:", {
+        orderId,
+        ageMs,
+      });
+      return statusResponse("pending", "database");
     }
 
     const url = `${PAYPOINT_BASE_URL}/upi/getAllTransactionStatus?refId=${encodeURIComponent(refId)}`;
@@ -86,8 +102,7 @@ export async function GET(request) {
     console.log("[PayPointStatus] HTTP status:", response.status);
     console.log("[PayPointStatus] raw response:", raw);
 
-    let payload = null;
-
+    let payload;
     try {
       payload = JSON.parse(raw);
     } catch (error) {
@@ -96,13 +111,11 @@ export async function GET(request) {
         "[PayPointStatus] request duration:",
         Date.now() - startedAt,
       );
-
       return NextResponse.json(
         {
           ok: false,
           status: "error",
           message: "Invalid response received from PayPoint",
-          rawResponse: raw,
         },
         { status: 502 },
       );
@@ -112,112 +125,102 @@ export async function GET(request) {
 
     console.log("[PayPointStatus] resultCode:", payload?.resultCode);
     console.log("[PayPointStatus] TxnStatus:", txnStatus);
-    console.log("[PayPointStatus] request duration:", Date.now() - startedAt);
+    console.log(
+      "[PayPointStatus] request duration:",
+      Date.now() - startedAt,
+    );
 
-    if (payload?.resultCode !== "000") {
+    if (!response.ok || payload?.resultCode !== "000") {
       return NextResponse.json(
         {
           ok: false,
           status: "error",
-          resultCode: payload?.resultCode,
-          resultMessage: payload?.resultMessage,
-          payload,
+          message: "PayPoint status request was unsuccessful",
         },
         { status: 502 },
       );
     }
 
-    if (txnStatus === 3) {
-      const payment = await prisma.payment.upsert({
-        where: { orderId },
-        update: {
-          status: "success",
-          gatewayOrderId: refId,
-          responseCode: "000",
-          responseMessage: "Reconciled via PayPoint status polling",
-          rawResponse: payload,
-          webhookVerified: true,
-          processedAt: new Date(),
-        },
-        create: {
-          orderId,
-          method: "upi_qr",
-          mode: "paypoint",
-          status: "success",
-          amount: order.amount,
-          gatewayOrderId: refId,
-          responseCode: "000",
-          responseMessage: "Reconciled via PayPoint status polling",
-          rawResponse: payload,
-          webhookVerified: true,
-          processedAt: new Date(),
-        },
-      });
-
-      await prisma.order.update({
-        where: { id: orderId },
-        data: {
-          status: "PAID",
-          paymentMethod: "upi_qr",
-          paymentId: payment.id,
-        },
-      });
-
-      return NextResponse.json({
-        ok: true,
-        status: "success",
-        txnStatus,
-        source: "gateway",
-      });
+    if (txnStatus !== 3 && txnStatus !== 4 && txnStatus !== 5) {
+      return statusResponse("pending", "gateway");
     }
 
-    if (txnStatus === 4 || txnStatus === 5) {
-      await prisma.payment.upsert({
-        where: { orderId },
-        update: {
+    const reconciled = await prisma.$transaction(async (tx) => {
+      const currentOrder = await tx.order.findUnique({
+        where: { id: orderId },
+        include: { payment: true },
+      });
+
+      if (!currentOrder) return { status: "pending", source: "database" };
+      if (currentOrder.status.toUpperCase() === "PAID") {
+        return { status: "success", source: "database" };
+      }
+      if (currentOrder.status.toUpperCase() === "FAILED") {
+        return { status: "failed", source: "database" };
+      }
+      if (!currentOrder.payment) {
+        return { status: "pending", source: "database" };
+      }
+
+      const now = new Date();
+
+      if (txnStatus === 3) {
+        const payment = await tx.payment.update({
+          where: { id: currentOrder.payment.id },
+          data: {
+            status: "success",
+            responseCode: "000",
+            responseMessage:
+              payload?.resultMessage || "Payment verified by PayPoint status",
+            rawResponse: payload,
+            processedAt: now,
+          },
+        });
+
+        await tx.order.update({
+          where: { id: orderId },
+          data: {
+            status: "PAID",
+            paymentMethod: payment.method,
+            paymentId: payment.id,
+          },
+        });
+
+        return { status: "success", source: "gateway" };
+      }
+
+      await tx.payment.update({
+        where: { id: currentOrder.payment.id },
+        data: {
           status: "failed",
-          gatewayOrderId: refId,
           responseCode: String(txnStatus),
-          responseMessage: "PayPoint payment failed or expired",
+          responseMessage:
+            payload?.resultMessage || "PayPoint payment failed or expired",
           rawResponse: payload,
-          processedAt: new Date(),
-        },
-        create: {
-          orderId,
-          method: "upi_qr",
-          mode: "paypoint",
-          status: "failed",
-          amount: order.amount,
-          gatewayOrderId: refId,
-          responseCode: String(txnStatus),
-          responseMessage: "PayPoint payment failed or expired",
-          rawResponse: payload,
-          processedAt: new Date(),
+          processedAt: now,
         },
       });
 
-      await prisma.order.update({
+      await tx.order.update({
         where: { id: orderId },
         data: {
           status: "FAILED",
-          paymentMethod: "upi_qr",
+          paymentMethod: currentOrder.payment.method,
+          paymentId: currentOrder.payment.id,
         },
       });
 
-      return NextResponse.json({
-        ok: true,
-        status: "failed",
-        txnStatus,
-        source: "gateway",
-      });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      status: "pending",
-      txnStatus,
-      source: "gateway",
+      return { status: "failed", source: "gateway" };
     });
+
+    console.log("[PayPointStatus] reconciliation result:", {
+      orderId,
+      refId,
+      txnStatus,
+      ...reconciled,
+    });
+
+    return statusResponse(reconciled.status, reconciled.source);
   } catch (error) {
     console.error("[PayPointStatus] error:", error);
     return NextResponse.json(

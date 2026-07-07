@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import {
   CheckCircle,
   XCircle,
@@ -68,7 +68,7 @@ export default function OrderConfirmation({ orderId }) {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       const res = await fetch(`/api/orders/${orderId}`, { cache: "no-store" });
       const data = await res.json();
@@ -78,11 +78,34 @@ export default function OrderConfirmation({ orderId }) {
     } finally {
       setLoading(false);
     }
-  };
+  }, [orderId]);
 
   useEffect(() => {
     if (orderId) fetchOrder();
-  }, [orderId]);
+  }, [fetchOrder, orderId]);
+
+  useEffect(() => {
+    if (!orderId || String(order?.status).toLowerCase() !== "pending") return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await fetch(
+          `/api/payment/status?orderId=${encodeURIComponent(orderId)}`,
+          { cache: "no-store" },
+        );
+        const result = await res.json();
+
+        if (result.status === "success" || result.status === "failed") {
+          clearInterval(interval);
+          await fetchOrder();
+        }
+      } catch (err) {
+        console.error("Order payment status fetch failed", err);
+      }
+    }, 5000);
+
+    return () => clearInterval(interval);
+  }, [fetchOrder, order?.status, orderId]);
 
   if (loading)
     return (
