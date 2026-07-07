@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 
 import { PAYPOINT_BASE_URL, getPaypointHeaders } from "@/config/paypoint";
+import prisma from "@/lib/prisma";
 
 function getDeviceMetadata() {
   return {
@@ -197,6 +198,66 @@ export async function POST(request) {
         { status: 502 },
       );
     }
+
+    const order = await prisma.order.findUnique({
+      where: { id: receipt },
+      select: {
+        id: true,
+        amount: true,
+        finalAmount: true,
+        shippingAmount: true,
+      },
+    });
+
+    if (!order) {
+      console.error("[PayPointInitiate] order not found for receipt:", receipt);
+      return NextResponse.json(
+        {
+          ok: false,
+          error: "Order not found for PayPoint payment",
+        },
+        { status: 404 },
+      );
+    }
+
+    const paymentAmount =
+      order.finalAmount == null
+        ? order.amount
+        : order.finalAmount + (order.shippingAmount || 0);
+
+    const payment = await prisma.payment.upsert({
+      where: { orderId: order.id },
+      update: {
+        method: "upi_qr",
+        mode: "paypoint",
+        status: "pending",
+        amount: paymentAmount,
+        gatewayOrderId: orderId,
+        responseCode: stepOneJson.resultCode,
+        responseMessage:
+          stepOneJson.resultMessage || "PayPoint order ID generated",
+        rawResponse: stepOneJson,
+      },
+      create: {
+        orderId: order.id,
+        method: "upi_qr",
+        mode: "paypoint",
+        status: "pending",
+        amount: paymentAmount,
+        gatewayOrderId: orderId,
+        responseCode: stepOneJson.resultCode,
+        responseMessage:
+          stepOneJson.resultMessage || "PayPoint order ID generated",
+        rawResponse: stepOneJson,
+      },
+    });
+
+    console.log("[PayPointInitiate] payment initialized:", {
+      paymentId: payment.id,
+      orderId: payment.orderId,
+      gatewayOrderId: payment.gatewayOrderId,
+      status: payment.status,
+    });
 
     const stepTwoPayload = {
       OrderId: orderId,
