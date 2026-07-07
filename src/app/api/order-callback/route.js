@@ -1,14 +1,16 @@
 ﻿import { NextResponse } from "next/server";
 
-const RESPONSE_BODY = {
-  ok: false,
-  error: "Payment callback endpoint is deprecated and no longer supported.",
-};
+export async function POST(request) {
+  const rawBody = await request.text();
 
-export async function GET() {
-  return NextResponse.json(RESPONSE_BODY, { status: 410 });
-}
+  console.log("================================");
+  console.log("PAYPOINT WEBHOOK RECEIVED");
+  console.log(new Date().toISOString());
+  console.log(rawBody);
+  console.log("================================");
 
-export async function POST() {
-  return NextResponse.json(RESPONSE_BODY, { status: 410 });
+  return NextResponse.json({
+    ok: true,
+    message: "Webhook received",
+  });
 }
