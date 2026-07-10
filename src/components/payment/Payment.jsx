@@ -231,11 +231,7 @@ export default function Payment({
   }, [polling]);
 
   useEffect(() => {
-    if (
-      !polling ||
-      secondsRemaining !== 0 ||
-      finalCheckStartedRef.current
-    ) {
+    if (!polling || secondsRemaining !== 0 || finalCheckStartedRef.current) {
       return;
     }
 
@@ -255,12 +251,7 @@ export default function Payment({
     };
 
     runFinalCheck();
-  }, [
-    fetchPaymentStatus,
-    polling,
-    redirectToConfirmation,
-    secondsRemaining,
-  ]);
+  }, [fetchPaymentStatus, polling, redirectToConfirmation, secondsRemaining]);
 
   const getButtonLabel = () => {
     switch (method) {
@@ -499,7 +490,6 @@ export default function Payment({
                     {(secondsRemaining % 60).toString().padStart(2, "0")}
                   </p>
                 )}
-
               </div>
             )}
 
@@ -516,13 +506,6 @@ export default function Payment({
             )}
 
             {upiError && <div className="text-sm text-red-600">{upiError}</div>}
-
-            {paypointOrderId && (
-              <div className="text-sm text-gray-600">
-                <div className="font-medium text-gray-700">Order ID</div>
-                <div className="break-all">{paypointOrderId}</div>
-              </div>
-            )}
 
             <p className="text-center text-xs text-gray-500">
               After completing the payment in your UPI app, return to this page.

@@ -40,7 +40,9 @@ function normalizePayload(payload) {
   }
 
   const data =
-    payload.data && typeof payload.data === "object" && !Array.isArray(payload.data)
+    payload.data &&
+    typeof payload.data === "object" &&
+    !Array.isArray(payload.data)
       ? payload.data
       : payload;
   const amount = Number(data.amount);
@@ -59,8 +61,7 @@ function normalizePayload(payload) {
     amount: Number.isFinite(amount) ? amount : null,
     gatewayId: data.msgId == null ? null : String(data.msgId).trim(),
     rrn: data.rrn == null ? null : String(data.rrn).trim(),
-    payerName:
-      data.payerName == null ? null : String(data.payerName).trim(),
+    payerName: data.payerName == null ? null : String(data.payerName).trim(),
     payerAddress:
       data.payerAddress == null ? null : String(data.payerAddress).trim(),
   };
@@ -70,6 +71,91 @@ function expectedOrderAmount(order) {
   return order.finalAmount == null
     ? order.amount
     : order.finalAmount + (order.shippingAmount || 0);
+}
+
+async function forwardWebhookToVendor({ rawBody, orderId, gatewayOrderId }) {
+  const destinationUrl = process.env.EXTERNAL_ORDER_WEBHOOK_URL?.trim();
+  if (!destinationUrl) return;
+
+  const startedAt = Date.now();
+  let status = "failed";
+  let forwardedToVendor = false;
+  let vendorStatusCode = null;
+  let message = "Vendor webhook forwarding failed";
+  let responseBody = null;
+  let errorMessage = null;
+
+  console.log(`${LOG_PREFIX} forwarding webhook`, {
+    orderId,
+    destinationUrl,
+  });
+
+  try {
+    const vendorResponse = await fetch(destinationUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: rawBody,
+      signal: AbortSignal.timeout(10000),
+    });
+
+    vendorStatusCode = vendorResponse.status;
+    responseBody = await vendorResponse.text();
+    forwardedToVendor = vendorResponse.ok;
+    status = vendorResponse.ok ? "success" : "failed";
+    message = vendorResponse.ok
+      ? "PayPoint webhook forwarded to vendor"
+      : `Vendor returned HTTP ${vendorResponse.status}`;
+
+    const logData = {
+      orderId,
+      destinationUrl,
+      httpStatus: vendorResponse.status,
+      durationMs: Date.now() - startedAt,
+    };
+    console.log("URL forwarded to vendor", logData);
+    if (vendorResponse.ok) {
+      console.log(`${LOG_PREFIX} webhook forwarded`, logData);
+    } else {
+      console.error(`${LOG_PREFIX} webhook forwarding failed`, logData);
+    }
+  } catch (error) {
+    errorMessage = error?.message || "Unknown vendor forwarding error";
+    message = errorMessage;
+
+    console.error(`${LOG_PREFIX} webhook forwarding error`, {
+      orderId,
+      destinationUrl,
+      durationMs: Date.now() - startedAt,
+      error: errorMessage,
+    });
+  }
+
+  try {
+    await prisma.externalOrderSyncLog.create({
+      data: {
+        orderId,
+        source: "paypoint",
+        stage: "webhook_forward",
+        status,
+        forwardedToVendor,
+        vendorStatusCode,
+        message,
+        meta: {
+          destinationUrl,
+          gatewayOrderId,
+          durationMs: Date.now() - startedAt,
+          responseBody: responseBody?.slice(0, 4000) || null,
+          error: errorMessage,
+        },
+      },
+    });
+  } catch (error) {
+    console.error(`${LOG_PREFIX} forwarding audit log failed`, {
+      orderId,
+      destinationUrl,
+      error: error?.message,
+    });
+  }
 }
 
 export async function POST(request) {
@@ -132,7 +218,67 @@ export async function POST(request) {
         include: { order: true },
       });
 
-      if (!payment) return { action: "payment_not_found" };
+      if (!payment) {
+        const externalOrderId = `PAYPOINT-EXT-${webhook.gatewayOrderId}`;
+
+        const address = await tx.address.create({
+          data: {
+            name: "External Order",
+            phone: "UNKNOWN",
+            address1: "EXTERNAL ORDER - ADDRESS UNKNOWN",
+            city: "UNKNOWN",
+            state: "UNKNOWN",
+            pincode: "000000",
+            country: "UNKNOWN",
+          },
+        });
+
+        const externalOrder = await tx.order.create({
+          data: {
+            id: externalOrderId,
+            addressId: address.id,
+            status: "PAID",
+            amount: webhook.amount,
+            email: "external@pending.local",
+            phone: "UNKNOWN",
+            paymentMethod: "upi_qr",
+            source: "external",
+            externalRefId: webhook.gatewayOrderId,
+          },
+        });
+
+        const externalPayment = await tx.payment.create({
+          data: {
+            orderId: externalOrder.id,
+            method: "upi_qr",
+            mode: "paypoint",
+            status: "success",
+            amount: webhook.amount,
+            gatewayOrderId: webhook.gatewayOrderId,
+            gatewayId: webhook.gatewayId,
+            rrn: webhook.rrn,
+            payerName: webhook.payerName,
+            payerAddress: webhook.payerAddress,
+            responseCode: webhook.resultCode,
+            responseMessage:
+              webhook.resultMessage || "External PayPoint payment verified",
+            rawResponse: payload,
+            webhookVerified: true,
+            webhookReceivedAt: receivedAt,
+            processedAt: receivedAt,
+          },
+        });
+
+        await tx.order.update({
+          where: { id: externalOrder.id },
+          data: { paymentId: externalPayment.id },
+        });
+
+        return {
+          action: "external_processed",
+          orderId: externalOrder.id,
+        };
+      }
 
       const expectedAmount = expectedOrderAmount(payment.order);
       if (webhook.amount !== expectedAmount) {
@@ -181,13 +327,6 @@ export async function POST(request) {
       return { action: "processed", orderId: payment.orderId };
     });
 
-    if (result.action === "payment_not_found") {
-      console.warn(`${LOG_PREFIX} ignored unknown gateway reference`, {
-        gatewayOrderId: webhook.gatewayOrderId,
-      });
-      return response("Unknown payment ignored");
-    }
-
     if (result.action === "amount_mismatch") {
       console.error(`${LOG_PREFIX} ignored amount mismatch`, result);
       return response("Amount mismatch ignored");
@@ -199,6 +338,11 @@ export async function POST(request) {
     }
 
     console.log(`${LOG_PREFIX} processed`, result);
+    await forwardWebhookToVendor({
+      rawBody,
+      orderId: result.orderId,
+      gatewayOrderId: webhook.gatewayOrderId,
+    });
     return response("Payment verified and order updated", true);
   } catch (error) {
     console.error(`${LOG_PREFIX} processing failed`, {
