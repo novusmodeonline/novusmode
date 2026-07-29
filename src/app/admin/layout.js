@@ -17,6 +17,12 @@ export default async function AdminLayout({ children }) {
               Orders
             </Link>
             <Link
+              href="/admin/products"
+              className="px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200"
+            >
+              Products
+            </Link>
+            <Link
               href="/admin/external-order-sync"
               className="px-3 py-1.5 rounded bg-gray-100 hover:bg-gray-200"
             >
