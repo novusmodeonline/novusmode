@@ -11,7 +11,7 @@ export default function ContactUsComponent() {
 
   const contactInfo = {
     company: "OIN GLOBAL SERVICES PVT LTD",
-    email: "info.ionglobalservices@gmail.com",
+    email: "support@novusmode.com",
     phone: "+91 96259 81309",
     address:
       "Office No. B-03, Basement, B-103, Sector 2, Noida, Gautambuddha Nagar, Uttar Pradesh - 201301",
