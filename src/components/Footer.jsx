@@ -35,7 +35,7 @@ export default async function SiteFooter() {
           </p>
           <div className="flex flex-col gap-1 text-white/70 text-sm mt-3 md:items-start items-center">
             <span className="flex items-center gap-2">
-              <Mail className="w-4 h-4" /> novusmodeonline@gmail.com
+              <Mail className="w-4 h-4" /> support@novusmode.com
             </span>
             <span className="flex items-center gap-2">
               <Phone className="w-4 h-4" />{" "}
