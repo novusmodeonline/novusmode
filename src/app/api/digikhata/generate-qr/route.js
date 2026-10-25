@@ -88,13 +88,13 @@ export async function POST(request) {
       }
     } else {
       // Fallback: If gateway returns error/unauthorized (e.g. running on non-whitelisted dev IP)
-      // generate valid UPI QR code for Prostyle Solutions so workflow is never blocked
+      // generate valid UPI QR code for OIN GLOBAL SERVICES so workflow is never blocked
       console.warn(
         "[DigiKhata] Gateway response not success, using standard UPI fallback:",
         digiData,
       );
       const cleanId = sanitizeDigiKhataOrderId(order.id);
-      const upiUri = `upi://pay?pa=merchant.29umesqg@paypoint&pn=Prostyle%20Solutions&am=${payableAmount}.00&tr=${cleanId}&tn=Order%20${cleanId}&cu=INR`;
+      const upiUri = `upi://pay?pa=merchant.29umesqg@paypoint&pn=OIN%20GLOBAL%20SERVICES&am=${payableAmount}.00&tr=${cleanId}&tn=Order%20${cleanId}&cu=INR`;
       qrCodeImage = await QRCode.toDataURL(upiUri, { width: 300, margin: 2 });
     }
 

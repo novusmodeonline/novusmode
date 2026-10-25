@@ -1,10 +1,10 @@
 // src/lib/digikhata.js
 
 const DEFAULT_BASE_URL = "https://connect.digikhata.in/dgkupi/";
-const DEFAULT_MERCHANT_ID = "132239";
-const DEFAULT_IDENTIFICATION_CODE = "PRO965STYLE";
-const DEFAULT_AUTH_KEY = "vwcYSt4z@ECProc2GMwLO#wZWfXKra";
-const DEFAULT_INTERFACE_KEY = "8EVK3gANnO9Vky1LefhXzZqLl4Kj1L";
+const DEFAULT_MERCHANT_ID = "134977";
+const DEFAULT_IDENTIFICATION_CODE = "OIN962GLOBAL";
+const DEFAULT_AUTH_KEY = "xRiSFmahmhveqDd5P05Z62tuxABhYd";
+const DEFAULT_INTERFACE_KEY = "XNfrAqMRK9kcDsv#kvHOefPJmZEoKw";
 
 export function getDigiKhataConfig() {
   const baseUrl = (
