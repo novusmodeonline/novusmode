@@ -14,4 +14,5 @@ This file tracks upcoming changes and requirements for the Novusmode project as 
 4. [x] Remove mentions of Pay10 Payment Gateway [x]
 5. [x] Ensure website address is novusmode.com [x]
 6. [ ] Deploy changes to VPS [/]
+7. [x] Configure payment callback URL to CowPay (https://api.cowpay.co/callback/pay/cowpayinrdigikhatatwo) [x]
 

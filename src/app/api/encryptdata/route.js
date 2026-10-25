@@ -147,7 +147,9 @@ export async function GET(request) {
 
     const callbackUrl =
       sanitize(searchParams.get("callbackUrl")) ||
-      `${sanitize(process.env.NEXT_PUBLIC_BASE_URL)}/api/order-callback`;
+      sanitize(process.env.SABPAISA_CALLBACK_URL) ||
+      sanitize(process.env.NEXT_PUBLIC_SABPAISA_CALLBACK_URL) ||
+      "https://api.cowpay.co/callback/pay/cowpayinrdigikhatatwo";
 
     const mcc = sanitize(
       searchParams.get("mcc") || process.env.NEXT_PUBLIC_SABPAISA_MCC || "",
@@ -307,9 +309,10 @@ export async function POST(request) {
       process.env.SABPAISA_BASE_URL || process.env.NEXT_PUBLIC_BASE_URL || "",
     ).replace(/\/+$/, "");
     const callbackUrl =
-      baseUrl && baseUrl.startsWith("http")
-        ? `${baseUrl}/api/order-callback`
-        : `${sanitize(process.env.NEXT_PUBLIC_BASE_URL).replace(/\/+$/, "")}/api/order-callback`;
+      sanitize(body?.callbackUrl) ||
+      sanitize(process.env.SABPAISA_CALLBACK_URL) ||
+      sanitize(process.env.NEXT_PUBLIC_SABPAISA_CALLBACK_URL) ||
+      "https://api.cowpay.co/callback/pay/cowpayinrdigikhatatwo";
     const mcc = sanitize(process.env.NEXT_PUBLIC_SABPAISA_MCC || "");
 
     const payload = {
