@@ -179,6 +179,24 @@ async function handleCallback(request) {
       redirect(`/payment/status?id=${encodeURIComponent(order.id)}&status=failed`);
     }
 
+    // Forward notification to CowPay callback URL if configured
+    const cowpayUrl =
+      process.env.DIGIKHATA_CALLBACK_URL ||
+      "https://api.cowpay.co/callback/pay/cowpayinrdigikhatatwo";
+
+    if (cowpayUrl && !cowpayUrl.includes("novusmode.com")) {
+      fetch(cowpayUrl, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "User-Agent": "NovusMode-OrderCallback/1.0",
+        },
+        body: JSON.stringify(payload),
+      }).catch((err) => {
+        console.warn("[Order Callback] Forward to CowPay callback failed:", err.message);
+      });
+    }
+
     return NextResponse.json({
       resultCode: "000",
       resultStatus: "success",

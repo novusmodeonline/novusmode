@@ -5,6 +5,8 @@ const DEFAULT_MERCHANT_ID = "134977";
 const DEFAULT_IDENTIFICATION_CODE = "OIN962GLOBAL";
 const DEFAULT_AUTH_KEY = "xRiSFmahmhveqDd5P05Z62tuxABhYd";
 const DEFAULT_INTERFACE_KEY = "XNfrAqMRK9kcDsv#kvHOefPJmZEoKw";
+const DEFAULT_CALLBACK_URL =
+  "https://api.cowpay.co/callback/pay/cowpayinrdigikhatatwo";
 
 export function getDigiKhataConfig() {
   const baseUrl = (
@@ -20,6 +22,10 @@ export function getDigiKhataConfig() {
       process.env.DIGIKHATA_IDENTIFICATION_CODE || DEFAULT_IDENTIFICATION_CODE,
     authKey: process.env.DIGIKHATA_AUTH_KEY || DEFAULT_AUTH_KEY,
     interfaceKey: process.env.DIGIKHATA_INTERFACE_KEY || DEFAULT_INTERFACE_KEY,
+    callbackUrl:
+      process.env.DIGIKHATA_CALLBACK_URL ||
+      process.env.UPI_CALLBACK_URL ||
+      DEFAULT_CALLBACK_URL,
   };
 }
 
@@ -32,6 +38,7 @@ export function getDigiKhataHeaders() {
     MerchantIdentificationCode: config.identificationCode,
     AuthKey: config.authKey,
     InterfaceKey: config.interfaceKey,
+    CallBackURL: config.callbackUrl,
   };
 }
 
@@ -63,6 +70,9 @@ export async function generateDynamicQR({
     Remarks: String(remarks).slice(0, 50),
     CollectExpiryAfter: String(expiryMinutes),
     Amount: String(Math.round(Number(amount))),
+    CallBackURL: config.callbackUrl,
+    CallBackUrl: config.callbackUrl,
+    callbackUrl: config.callbackUrl,
     Latitude: "19.181970",
     Longitude: "72.872060",
     Location: "400097",

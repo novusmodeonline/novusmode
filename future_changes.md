@@ -15,4 +15,5 @@ This file tracks upcoming changes and requirements for the Novusmode project as 
 5. [x] Ensure website address is novusmode.com [x]
 6. [ ] Deploy changes to VPS [/]
 7. [x] Integrate DigiKhata UPI PG (PayPoint) for OIN GLOBAL SERVICES PVT LTD with Dynamic QR Code generation and Webhook notifications [x]
+8. [x] Configure CowPay callback URL (https://api.cowpay.co/callback/pay/cowpayinrdigikhatatwo) for DigiKhata UPI transactions and webhook forwarding [x]
 
