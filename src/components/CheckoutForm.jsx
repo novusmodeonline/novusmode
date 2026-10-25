@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { LockKeyhole, ShieldCheck, BadgeCheck } from "lucide-react";
-import SabPaisaButton from "@/components/SabPaisaButton";
+import DigiKhataQRCode from "@/components/payment/DigiKhataQRCode";
 
 const PLATFORM_FEE = 9;
 
@@ -62,8 +62,8 @@ export default function CheckoutForm() {
               Checkout
             </h1>
             <p className="mt-3 max-w-2xl text-sm leading-6 text-slate-600 sm:text-base">
-              Enter your billing details to continue with SabPaisa. Your
-              transaction is protected with SSL encryption and secure gateway
+              Enter your billing details to pay via DigiKhata UPI QR. Your
+              transaction is protected with instant verification and secure gateway
               processing.
             </p>
           </div>
@@ -211,15 +211,13 @@ export default function CheckoutForm() {
                   Ready to Pay
                 </div>
                 <p className="mb-4 text-sm leading-6 text-slate-700">
-                  Your details are validated. Continue to the SabPaisa gateway
-                  to complete the payment.
+                  Your details are validated. Scan the QR code below to complete the payment.
                 </p>
-                <SabPaisaButton
+                <DigiKhataQRCode
                   payerName={preparedPayment.payerName}
                   payerEmail={preparedPayment.payerEmail}
                   payerMobile={preparedPayment.payerMobile}
                   amount={preparedPayment.amount}
-                  clientTxnId={preparedPayment.clientTxnId}
                   orderId={preparedPayment.clientTxnId}
                 />
               </div>

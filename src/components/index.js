@@ -77,6 +77,7 @@ export { default as CardPaymentForm } from "./payment/CardPaymentForm";
 export { default as CodPayment } from "./payment/CodPayment";
 export { default as NetbankingPaymentForm } from "./payment/NetbankingPaymentForm";
 export { default as PaymentMethodSelector } from "./payment/PaymentMethodSelector";
+export { default as DigiKhataQRCode } from "./payment/DigiKhataQRCode";
 export { default as SavedCards } from "./payment/SavedCards";
 export { default as SabPaisaButton } from "./SabPaisaButton";
 export { default as CheckoutForm } from "./CheckoutForm";

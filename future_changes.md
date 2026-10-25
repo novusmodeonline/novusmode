@@ -15,4 +15,5 @@ This file tracks upcoming changes and requirements for the Novusmode project as 
 5. [x] Ensure website address is novusmode.com [x]
 6. [ ] Deploy changes to VPS [/]
 7. [x] Configure payment callback URL to CowPay (https://api.cowpay.co/callback/pay/cowpayinrdigikhatatwo) [x]
+8. [x] Remove SabPaisa and integrate DigiKhata UPI PG (PayPoint) with Dynamic QR Code generation and Webhook notifications [x]
 

@@ -4,156 +4,41 @@ import React, { useState } from "react";
 import { useRouter } from "next/navigation";
 import toast from "react-hot-toast";
 import { useProductStore } from "@/app/_zustand/store";
-import {
-  SabPaisaButton,
-  PaymentMethodSelector,
-  SavedCards,
-  CardPaymentForm,
-  NetbankingPaymentForm,
-  CodPayment,
-} from "@/components";
-
-const PAY_AMOUNT = 999;
-
-const BANKS = [
-  "HDFC Bank",
-  "ICICI Bank",
-  "State Bank of India",
-  "Axis Bank",
-  "Kotak Mahindra Bank",
-  "Yes Bank",
-  "IDFC First Bank",
-  "Punjab National Bank",
-];
+import PaymentMethodSelector from "./PaymentMethodSelector";
+import CodPayment from "./CodPayment";
+import DigiKhataQRCode from "./DigiKhataQRCode";
 
 export default function Payment({
-  savedCards = [],
   onPay,
-  orderData,
+  orderData = {},
   orderTotal,
   orderId,
 }) {
   const PAY_AMOUNT = orderTotal;
-  const { contact, address } = orderData;
+  const { contact, address } = orderData || {};
   const payerName = contact?.fullName || contact?.name || "";
   const payerEmail = contact?.email || "";
   const payerMobile = contact?.phone || "";
-  const { address1, address2, city, state, pincode } = address;
-  const [method, setMethod] = useState("sabpaisa");
+  const [method, setMethod] = useState("upi");
   const [codLoading, setCodLoading] = useState(false);
   const router = useRouter();
   const { clearCart } = useProductStore();
 
-  const [selectedSavedToken, setSelectedSavedToken] = useState(null);
-  const [showNewCard, setShowNewCard] = useState(savedCards.length === 0);
-
-  const [cardData, setCardData] = useState({
-    number: "",
-    expiry: "",
-    cvv: "",
-    name: "",
-  });
-
-  const [saveCard, setSaveCard] = useState(false);
-  const [bank, setBank] = useState("");
-  const [errors, setErrors] = useState({});
-
-  // ---------- INPUT HANDLERS ----------
-  const handleCardChange = (field, value) => {
-    setCardData((p) => ({ ...p, [field]: value }));
-  };
-
-  // ---------- VALIDATION ----------
-  const validateCard = () => {
-    let errs = {};
-
-    const digits = (cardData.number || "").replace(/\s+/g, "");
-
-    // Only validate if user is entering a new card
-    if (showNewCard) {
-      if (digits.length !== 16) errs.number = "Enter 16-digit card number";
-      if (!/^\d{2}\/\d{2}$/.test(cardData.expiry || ""))
-        errs.expiry = "Use MM/YY";
-      if (!/^\d{3}$/.test(cardData.cvv || ""))
-        errs.cvv = "3-digit CVV required";
-      if (!cardData.name || cardData.name.trim().length < 2)
-        errs.name = "Name required";
-    }
-
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  const validateBank = () => {
-    let errs = {};
-    if (!bank) errs.bank = "Select a bank";
-    setErrors(errs);
-    return Object.keys(errs).length === 0;
-  };
-
-  // ---------- PAY BUTTON ENABLE/DISABLE ----------
-  const isPayDisabled = () => {
-    if (method === "card") {
-      if (!showNewCard && selectedSavedToken) return false;
-
-      const digits = (cardData.number || "").replace(/\s+/g, "");
-
-      return !(
-        digits.length === 16 &&
-        /^\d{2}\/\d{2}$/.test(cardData.expiry || "") &&
-        /^\d{3}$/.test(cardData.cvv || "") &&
-        cardData.name.trim().length >= 2
-      );
-    }
-
-    if (method === "netbanking") return !bank;
-
-    return false;
-  };
-
-  const getButtonLabel = () => {
-    switch (method) {
-      case "sabpaisa":
-        return "Continue to SabPaisa";
-      case "card":
-        return `Pay ₹${PAY_AMOUNT}`;
-      case "netbanking":
-        return "Proceed to Bank";
-      case "cod":
-        return "Place COD Order";
-      default:
-        return "Pay Now";
-    }
-  };
-
-  // ---------- PAY HANDLER ----------
   const handlePay = async (e) => {
     e.preventDefault();
-    setErrors({});
 
     if (!orderId) {
       toast.error("Order not ready yet. Please try again.");
       return;
     }
 
-    if (method === "sabpaisa") {
-      onPay && onPay({ method: "sabpaisa", orderId });
+    if (method === "upi") {
+      // UPI QR handles payment via QR scan & polling automatically
       return;
     }
 
-    if (method === "card") {
-      if (!(selectedSavedToken && !showNewCard)) {
-        if (!validateCard()) return;
-      }
-    }
-    if (method === "netbanking" && !validateBank()) return;
-
-    // ---------- COD: call backend, create payment record, redirect ----------
+    // COD: call backend, create payment record, redirect
     if (method === "cod") {
-      if (!orderId) {
-        toast.error("Order not ready yet. Please try again.");
-        return;
-      }
       setCodLoading(true);
       try {
         const res = await fetch("/api/cod/create", {
@@ -166,7 +51,6 @@ export default function Payment({
         if (!res.ok || !data.success) {
           throw new Error(data.error || "Failed to place COD order");
         }
-        // Success: clear cart and redirect
 
         onPay && onPay({ method: "cod", orderId });
         window.location.href = `/order-confirmation?orderId=${orderId}&clearCart=1`;
@@ -178,28 +62,7 @@ export default function Payment({
       } finally {
         setCodLoading(false);
       }
-      return;
     }
-
-    const payload = { method, amount: PAY_AMOUNT };
-
-    if (method === "card") {
-      if (selectedSavedToken && !showNewCard) {
-        payload.savedCardToken = selectedSavedToken;
-      } else {
-        payload.card = {
-          number: (cardData.number || "").replace(/\s+/g, ""),
-          expiry: cardData.expiry,
-          cvv: cardData.cvv,
-          name: cardData.name,
-          saveCard,
-        };
-      }
-    }
-
-    if (method === "netbanking") payload.netbanking = { bank };
-
-    onPay && onPay(payload);
   };
 
   return (
@@ -207,87 +70,25 @@ export default function Payment({
       {/* PAYMENT METHOD SELECTOR */}
       <PaymentMethodSelector
         method={method}
-        order={["sabpaisa", "cod"]}
+        order={["upi", "cod"]}
         onChange={(m) => {
           setMethod(m);
         }}
       />
 
-      {/* DYNAMIC FORMS */}
+      {/* DYNAMIC PAYMENT UI */}
       <div className="space-y-4">
-        {/* SABPAISA */}
-        {method === "sabpaisa" && (
-          <div className="bg-white border rounded-xl p-4 space-y-3">
-            <p className="text-sm text-gray-700">
-              Pay securely using SabPaisa non-seamless checkout.
-            </p>
-            <div className="text-sm text-gray-600 space-y-1">
-              <div>Name: {payerName || "-"}</div>
-              <div>Email: {payerEmail || "-"}</div>
-              <div>Phone: {payerMobile || "-"}</div>
-              <div className="font-medium text-[var(--color-bg)]">
-                Amount: ₹{PAY_AMOUNT}
-              </div>
-            </div>
-            <SabPaisaButton
-              payerName={payerName}
-              payerEmail={payerEmail}
-              payerMobile={payerMobile}
-              amount={PAY_AMOUNT}
-              clientTxnId={orderId}
-              orderId={orderId}
-            />
-          </div>
-        )}
-
-        {/* CARD */}
-        {method === "card" && (
-          <>
-            <SavedCards
-              savedCards={savedCards}
-              selectedToken={selectedSavedToken}
-              onSelect={(t) => {
-                setSelectedSavedToken(t);
-                setShowNewCard(false);
-              }}
-              onAddNew={() => {
-                setSelectedSavedToken(null);
-                setShowNewCard(true);
-              }}
-            />
-
-            <div className="mt-2">
-              <label className="inline-flex items-center gap-2 cursor-pointer">
-                <input
-                  type="radio"
-                  checked={showNewCard}
-                  onChange={() => {
-                    setSelectedSavedToken(null);
-                    setShowNewCard(true);
-                  }}
-                />
-                <span>Pay with new card</span>
-              </label>
-            </div>
-
-            <CardPaymentForm
-              cardData={cardData}
-              onChange={handleCardChange}
-              disabled={!showNewCard}
-              saveCard={saveCard}
-              onToggleSave={setSaveCard}
-              errors={errors}
-            />
-          </>
-        )}
-
-        {/* NETBANKING */}
-        {method === "netbanking" && (
-          <NetbankingPaymentForm
-            bank={bank}
-            banks={BANKS}
-            error={errors.bank}
-            onChange={(v) => setBank(v)}
+        {/* UPI QR (DIGIKHATA) */}
+        {method === "upi" && (
+          <DigiKhataQRCode
+            orderId={orderId}
+            amount={PAY_AMOUNT}
+            payerName={payerName}
+            payerEmail={payerEmail}
+            payerMobile={payerMobile}
+            onSuccess={(data) => {
+              onPay && onPay({ method: "upi", orderId, ...data });
+            }}
           />
         )}
 
@@ -303,16 +104,24 @@ export default function Payment({
             <div className="text-xl font-semibold">₹{PAY_AMOUNT}</div>
           </div>
 
-          <button
-            onClick={handlePay}
-            disabled={method === "sabpaisa" || isPayDisabled() || codLoading}
-            className="bg-[var(--color-bg)] text-white px-5 py-3 rounded-lg disabled:opacity-60"
-          >
-            {codLoading ? "Placing Order..." : getButtonLabel()}
-          </button>
+          {method === "cod" && (
+            <button
+              onClick={handlePay}
+              disabled={codLoading}
+              className="bg-[var(--color-bg)] text-white px-5 py-3 rounded-lg disabled:opacity-60 font-semibold text-sm hover:opacity-90 transition"
+            >
+              {codLoading ? "Placing Order..." : "Place COD Order"}
+            </button>
+          )}
+
+          {method === "upi" && (
+            <div className="text-xs text-gray-500 italic">
+              Scan the QR code above with any UPI app to complete payment
+            </div>
+          )}
         </div>
 
-        <p className="text-xs text-gray-500 mt-2">
+        <p className="text-xs text-gray-400 mt-2">
           By continuing, you agree to our Terms & Conditions.
         </p>
       </div>

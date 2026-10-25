@@ -4,7 +4,7 @@ import React from "react";
 
 export default function PaymentMethodSelector({ method, onChange, order }) {
   const METHOD_LABELS = {
-    sabpaisa: "Online Payment (SabPaisa)",
+    upi: "Instant UPI QR (Scan & Pay - DigiKhata)",
     cod: "Cash on Delivery",
   };
 
@@ -22,7 +22,7 @@ export default function PaymentMethodSelector({ method, onChange, order }) {
             checked={method === m}
             onChange={() => onChange(m)}
           />
-          <span>{METHOD_LABELS[m]}</span>
+          <span className="font-medium text-gray-800">{METHOD_LABELS[m] || m}</span>
         </label>
       ))}
     </div>

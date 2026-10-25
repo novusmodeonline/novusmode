@@ -1,0 +1,147 @@
+// src/lib/digikhata.js
+
+const DEFAULT_BASE_URL = "https://connect.digikhata.in/dgkupi/";
+const DEFAULT_MERCHANT_ID = "132239";
+const DEFAULT_IDENTIFICATION_CODE = "PRO965STYLE";
+const DEFAULT_AUTH_KEY = "vwcYSt4z@ECProc2GMwLO#wZWfXKra";
+const DEFAULT_INTERFACE_KEY = "8EVK3gANnO9Vky1LefhXzZqLl4Kj1L";
+
+export function getDigiKhataConfig() {
+  const baseUrl = (
+    process.env.DIGIKHATA_BASE_URL ||
+    process.env.UPI_API_BASE_URL ||
+    DEFAULT_BASE_URL
+  ).replace(/\/+$/, "");
+
+  return {
+    baseUrl,
+    merchantId: process.env.DIGIKHATA_MERCHANT_ID || DEFAULT_MERCHANT_ID,
+    identificationCode:
+      process.env.DIGIKHATA_IDENTIFICATION_CODE || DEFAULT_IDENTIFICATION_CODE,
+    authKey: process.env.DIGIKHATA_AUTH_KEY || DEFAULT_AUTH_KEY,
+    interfaceKey: process.env.DIGIKHATA_INTERFACE_KEY || DEFAULT_INTERFACE_KEY,
+  };
+}
+
+export function getDigiKhataHeaders() {
+  const config = getDigiKhataConfig();
+  return {
+    "Content-Type": "application/json",
+    MerchantID: config.merchantId,
+    IdentificationCode: config.identificationCode,
+    MerchantIdentificationCode: config.identificationCode,
+    AuthKey: config.authKey,
+    InterfaceKey: config.interfaceKey,
+  };
+}
+
+/**
+ * Clean order ID to contain only alphanumeric characters as per DigiKhata requirement
+ */
+export function sanitizeDigiKhataOrderId(orderId) {
+  return String(orderId || "").replace(/[^a-zA-Z0-9]/g, "");
+}
+
+/**
+ * Generate a Dynamic QR Code from DigiKhata UPI PG
+ */
+export async function generateDynamicQR({
+  orderId,
+  amount,
+  remarks = "Payment",
+  expiryMinutes = 5,
+  ipAddress = "103.216.209.250",
+}) {
+  const config = getDigiKhataConfig();
+  const headers = getDigiKhataHeaders();
+  const cleanOrderId = sanitizeDigiKhataOrderId(orderId);
+
+  const endpoint = `${config.baseUrl}/upi/generatedynamicqr`;
+
+  const payload = {
+    OrderId: cleanOrderId,
+    Remarks: String(remarks).slice(0, 50),
+    CollectExpiryAfter: String(expiryMinutes),
+    Amount: String(Math.round(Number(amount))),
+    Latitude: "19.181970",
+    Longitude: "72.872060",
+    Location: "400097",
+    IPAddress: ipAddress || "103.216.209.250",
+    DeviceSerial: "Chrome",
+    DeviceOS: "Windows",
+    AppTechName: "com.digikhata.in",
+  };
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST",
+      headers,
+      body: JSON.stringify(payload),
+    });
+
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+
+    return {
+      status: response.status,
+      ok: response.ok,
+      data,
+      endpoint,
+      payload,
+    };
+  } catch (error) {
+    return {
+      status: 500,
+      ok: false,
+      error: error.message,
+      endpoint,
+      payload,
+    };
+  }
+}
+
+/**
+ * Check transaction status from DigiKhata
+ * Uses getAllTransactionStatusv2 for polling
+ */
+export async function checkDigiKhataStatus(orderId) {
+  const config = getDigiKhataConfig();
+  const headers = getDigiKhataHeaders();
+  const cleanOrderId = sanitizeDigiKhataOrderId(orderId);
+
+  const endpoint = `${config.baseUrl}/upi/getAllTransactionStatusv2?refId=${cleanOrderId}`;
+
+  try {
+    const response = await fetch(endpoint, {
+      method: "GET",
+      headers,
+    });
+
+    const text = await response.text();
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      data = { raw: text };
+    }
+
+    return {
+      status: response.status,
+      ok: response.ok,
+      data,
+      endpoint,
+    };
+  } catch (error) {
+    return {
+      status: 500,
+      ok: false,
+      error: error.message,
+      endpoint,
+    };
+  }
+}

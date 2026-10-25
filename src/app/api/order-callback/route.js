@@ -90,6 +90,71 @@ async function handleCallback(request) {
 
   try {
     const { source, payload } = await extractCallbackPayload(request);
+
+    // DigiKhata Webhook Handler
+    if (payload?.data && (payload?.resultCode !== undefined || payload?.resultStatus !== undefined)) {
+      const { data, resultCode, resultStatus } = payload;
+      const refId = data?.refId || data?.OrderId || data?.orderId;
+      const isSuccess = resultCode === "000" || String(resultStatus || "").toLowerCase() === "success";
+
+      if (refId) {
+        const order = await prisma.order.findFirst({
+          where: {
+            OR: [
+              { id: refId },
+              { id: refId.replace(/[^a-zA-Z0-9]/g, "") },
+            ],
+          },
+        });
+
+        if (order) {
+          const paymentStatus = isSuccess ? "success" : "failed";
+          const orderStatus = isSuccess ? "paid" : "failed";
+
+          await prisma.payment.upsert({
+            where: { orderId: order.id },
+            update: {
+              method: "DIGIKHATA_UPI",
+              status: paymentStatus,
+              amount: data.amount ? Math.round(Number(data.amount)) : order.amount,
+              gatewayId: data.id || null,
+              rrn: data.rrn || null,
+              payerAddress: data.payerAddress || null,
+              payerName: data.payerName || null,
+              webhookVerified: true,
+              processedAt: new Date(),
+            },
+            create: {
+              orderId: order.id,
+              method: "DIGIKHATA_UPI",
+              status: paymentStatus,
+              amount: data.amount ? Math.round(Number(data.amount)) : order.amount,
+              gatewayId: data.id || null,
+              rrn: data.rrn || null,
+              payerAddress: data.payerAddress || null,
+              payerName: data.payerName || null,
+              webhookVerified: true,
+              processedAt: new Date(),
+            },
+          });
+
+          await prisma.order.update({
+            where: { id: order.id },
+            data: {
+              status: orderStatus,
+              paymentMethod: "DIGIKHATA_UPI",
+            },
+          });
+
+          return NextResponse.json({
+            resultCode: "000",
+            resultStatus: "success",
+            resultMessage: "DigiKhata webhook processed",
+          });
+        }
+      }
+    }
+
     const encResponseValue =
       payload.encResponse ||
       payload.encresponse ||
